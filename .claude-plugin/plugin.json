@@ -1,0 +1,46 @@
+{
+  "name": "learning-agent",
+  "description": "Active agent memory, token optimization, and automatic bootstrap from codebase. Skills: /la init, /la flush, /la audit, /la reset.",
+  "author": {
+    "name": "Andraus Felipe Ribeiro"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\"",
+            "timeout": 10,
+            "statusMessage": "Loading agent memories..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use.js\"",
+            "timeout": 5,
+            "statusMessage": "Checking model routing..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop.js\"",
+            "timeout": 5,
+            "statusMessage": "Checking task completion..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "andraus-local",
+  "description": "Local plugins by Andraus Felipe Ribeiro",
+  "owner": {
+    "name": "Andraus Felipe Ribeiro"
+  },
+  "plugins": [
+    {
+      "name": "learning-agent",
+      "description": "Active agent memory, token optimization, and automatic bootstrap from codebase. Skills: /la init, /la flush, /la audit, /la reset.",
+      "source": "./"
+    }
+  ]
+}

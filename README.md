@@ -29,12 +29,12 @@ That's it.
 
 **Windows — run in PowerShell:**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/YOUR_USER/nirvana/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/install.ps1 | iex
 ```
 
 **macOS / Linux — run in terminal:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/nirvana/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/install.sh | bash
 ```
 
 The installer:

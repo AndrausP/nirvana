@@ -1,13 +1,13 @@
 #!/bin/bash
 # Nirvana Installer — macOS / Linux
-# Run: curl -fsSL https://raw.githubusercontent.com/YOUR_USER/nirvana/main/install.sh | bash
+# Run: curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/install.sh | bash
 
 set -e
 
 NIRVANA_VERSION="1.0.0"
 SKILLS_DIR="$HOME/.claude/skills"
 SKILLS=("light" "bigtask" "smalltask" "reflect" "law" "path" "karma")
-REPO_RAW="https://raw.githubusercontent.com/YOUR_USER/nirvana/main"
+REPO_RAW="https://raw.githubusercontent.com/AndrausP/nirvana/main"
 
 echo ""
 echo "  Nirvana $NIRVANA_VERSION — Installer"

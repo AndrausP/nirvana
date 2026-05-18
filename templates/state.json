@@ -1,0 +1,42 @@
+{
+  "nirvana": "1.0.0",
+  "sync": {
+    "every": 5,
+    "sessionCount": 0,
+    "lastSync": null
+  },
+  "compact": {
+    "auto": true,
+    "threshold": 70
+  },
+  "preferences": {
+    "caveman": "full",
+    "language": "auto"
+  },
+  "project": {
+    "type": "{{PROJECT_TYPE}}",
+    "stack": ["{{STACK}}"],
+    "docsPath": "docs/"
+  },
+  "agents": {
+    "backendDev": {
+      "active": true,
+      "specialty": "{{BACKEND_SPECIALTY}}"
+    },
+    "frontendDev": {
+      "active": true,
+      "specialty": "{{FRONTEND_SPECIALTY}}"
+    },
+    "qa": {
+      "active": true,
+      "specialty": "{{QA_SPECIALTY}}"
+    },
+    "businessAnalyst": {
+      "active": true
+    }
+  },
+  "tasks": {
+    "bigtaskAutoGrill": true,
+    "smalltaskAutoExecute": true
+  }
+}

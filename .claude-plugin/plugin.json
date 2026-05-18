@@ -1,6 +1,6 @@
 {
   "name": "learning-agent",
-  "description": "Active agent memory, token optimization, and automatic bootstrap from codebase. Skills: /la init, /la flush, /la audit, /la reset.",
+  "description": "Active agent memory, token optimization, and automatic bootstrap from codebase. Skills: /la-init, /la-flush, /la-audit, /la-reset.",
   "author": {
     "name": "Andraus Felipe Ribeiro"
   },

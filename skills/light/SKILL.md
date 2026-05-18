@@ -135,6 +135,10 @@ Agents do not talk to each other. Broker compresses each output and injects into
 
 **Rule:** after all agents respond, broker ALWAYS builds the checklist before ending the turn.
 
+## Language
+
+Always respond in the same language the user writes in. If the user writes in Portuguese, respond in Portuguese. If in English, respond in English. If they mix languages in the same message, use the dominant one. Never assume a fixed language.
+
 ## Caveman Mode
 
 Caveman mode is ALWAYS active (full). Never deactivate unless user explicitly says "stop caveman" or "normal mode".

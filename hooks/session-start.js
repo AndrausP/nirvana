@@ -6,6 +6,25 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// ── ASCENSION BANNER ────────────────────────────────────────────────────────
+const P  = '\x1b[35m';   // purple
+const R  = '\x1b[91m';   // bright red
+const B  = '\x1b[1m';    // bold
+const D  = '\x1b[2m';    // dim
+const RS = '\x1b[0m';    // reset
+
+const banner = [
+  '',
+  `${B}${P}╔══════════════════════════════════════════════╗${RS}`,
+  `${B}${P}║${RS}   ${B}${R}⚔  T H E  A S C E N S I O N  P R O T O C O L  ⚔${RS}   ${B}${P}║${RS}`,
+  `${B}${P}║${RS}  ${D}${P}/invoke /inscribe /gaze /forge /chronicle${RS}  ${B}${P}║${RS}`,
+  `${B}${P}╚══════════════════════════════════════════════╝${RS}`,
+  '',
+].join('\n');
+
+process.stderr.write(banner);
+// ────────────────────────────────────────────────────────────────────────────
+
 const MAX_AGENTS = 20;
 const SECTION_DISPLAY_COUNT = 2; // entries shown per section in context
 const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');

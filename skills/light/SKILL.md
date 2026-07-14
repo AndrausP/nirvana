@@ -1,9 +1,15 @@
 ---
 name: light
-description: Nirvana initializer — sets up broker protocol, 4 generic agents, docs skeleton, and token-saving compact automation for any project. Run once per project to activate Nirvana.
+description: Nirvana initializer — merges the broker protocol and 9 role-based agents into the project's own CLAUDE.md, sets up docs/knowledge (graphify-indexed shared memory), sprints/tasks skeleton, and token-saving compact automation. Run once per project to activate Nirvana.
 ---
 
 You are executing the Nirvana /light setup. Follow every step exactly. Do not skip steps. Do not ask permission between steps unless instructed.
+
+**Template source:** every `templates/X` reference below means `~/.claude/nirvana-templates/X`
+(installed globally by `install.ps1`/`install.sh` — NOT a path relative to the current project,
+and NOT the Nirvana repo's own `templates/` folder, which isn't present in a normal install). If
+`~/.claude/nirvana-templates/` doesn't exist, tell the user their Nirvana install is outdated
+(pre-2.0) and to re-run the installer, then stop.
 
 ## STEP 1 — Re-run detection
 
@@ -13,7 +19,7 @@ If it EXISTS:
 - Tell the user: "Nirvana already configured for this project."
 - Use AskUserQuestion: "What would you like to do?" | options: ["Update configuration (preserves session history)", "Cancel"]
 - If Cancel: stop completely.
-- If Update: continue to Step 2, but in Step 5 MERGE state.json (preserve `sync.sessionCount` and `sync.lastSync` values).
+- If Update: continue to Step 2, but in Step 5 MERGE state.json (preserve `sync.sessionCount` and `sync.lastSync` values) and in Step 5a only regenerate the content BETWEEN the Nirvana markers in CLAUDE.md (see Step 5a) — never touch anything outside them.
 
 If NOT exists: continue to Step 2.
 
@@ -28,7 +34,7 @@ If NOT exists: continue to Step 2.
    - `pom.xml` or `build.gradle` → Java/Kotlin
    - `Cargo.toml` → Rust
    - `Gemfile` → Ruby
-   - `CLAUDE.md` → read first 80 lines to understand project context
+   - `CLAUDE.md` → read the ENTIRE file (not just 80 lines) — Step 5a needs the full content to merge correctly
 3. Determine:
    - `PROJECT_TYPE`: web-api | web-fullstack | mobile | cli | library | data | unknown
    - `BACKEND_LANGUAGE`: csharp | python | go | java | javascript | ruby | rust | unknown
@@ -47,13 +53,19 @@ Display this block:
   Project: [PROJECT_TYPE] | Stack: [detected stack summary]
 
   What will happen:
-  1. Read project structure to configure agents
-  2. Append @import .claude/BEHAVIOR.md to your CLAUDE.md
-  3. Create .claude/BEHAVIOR.md with broker + 4 agents specialized for [stack]
-  4. Create .claude/state.json with your preferences
-  5. Create docs/ folder (architecture.md, modules.md, decisions.md)
-  6. Update ~/.claude/CLAUDE.md with Nirvana generic agent protocol
-  7. Create agent memory files in ~/.claude/agents-memory/
+  1. Read project structure to configure 9 agents (Product Owner, Tech Lead,
+     Architect, Dev Backend, Dev Frontend, Designer, QA, Reader, Writer)
+  2. Read your existing CLAUDE.md (if any) and merge the Nirvana broker
+     protocol INTO it — between markers, nothing else touched. No separate
+     BEHAVIOR.md file, no @import.
+  3. Create .claude/state.json with your preferences
+  4. Create docs/ skeleton: architecture.md, modules.md, decisions.md,
+     sprints/, tasks/, knowledge/ (errors-aprendidos.md, patterns.md,
+     business-rules.md — this is what graphify indexes)
+  5. Wire a SessionStart banner (shows sprint/tasks/chat status every time
+     you open this project) — merged into .claude/settings.json, existing
+     hooks untouched
+  6. Update ~/.claude/CLAUDE.md with the generic Nirvana 9-agent table
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -75,274 +87,153 @@ Question 2 (AskUserQuestion):
 
 ## STEP 5 — Execute setup (all steps, no confirmation needed)
 
-### 5a — Create .claude/BEHAVIOR.md
+### 5a — Merge the Nirvana protocol INTO the project's CLAUDE.md (do NOT create BEHAVIOR.md)
 
-Build the content by filling these placeholders from Step 2 detection:
-- {{BACKEND_SPECIALTY}} → e.g., "C# / ASP.NET Core 8 / EF Core / PostgreSQL"
-- {{FRONTEND_SPECIALTY}} → e.g., "React 18 / TypeScript / TailwindCSS"
-- {{QA_SPECIALTY}} → e.g., "NUnit / Moq / integration testing"
-- {{STACK_SUMMARY}} → one-line stack description
-- {{PROJECT_TYPE}} → detected project type
+This is the core rule change: Nirvana no longer owns a separate file. It reads the project's
+own `CLAUDE.md`, keeps whatever is already there that still makes sense, and injects its own
+instructions directly into it, wrapped in markers so future `/light` runs can update just that
+slice.
 
-Content to write:
+1. If `CLAUDE.md` does not exist in the project root: create it with this header, then the
+   Nirvana block (Step 5a-3) right after it:
+   ```markdown
+   # CLAUDE.md
 
-```markdown
-# Nirvana — Behavior
+   This project uses Nirvana — see the block below for the broker protocol and 9-agent chain.
+   ```
+2. If `CLAUDE.md` exists: read it in full. Look for the markers:
+   ```
+   <!-- NIRVANA:START (do not edit by hand — regenerated by /light) -->
+   ...
+   <!-- NIRVANA:END -->
+   ```
+   - If the markers ARE found: replace everything between them with the freshly generated
+     block from Step 5a-3. Leave every other line in the file untouched, in its original
+     position.
+   - If the markers are NOT found: keep the entire existing file content as-is, and append the
+     marker block (Step 5a-3) at the end of the file, separated by a blank line. Do not remove,
+     reword, or reorder anything that was already there — only add.
+   - Use judgment on genuine conflicts (e.g. the file already has its own hand-written "agents"
+     table or broker description that predates Nirvana): keep the pre-existing content where it
+     is, and still add the Nirvana block — do not silently delete a human's prior instructions.
+     If the overlap looks substantial, tell the user what was kept vs. added in the final report.
 
-> Gerado por /light. Edite manualmente se necessário. Reimporte com /light update.
+3. The Nirvana block to inject (fill placeholders from Step 2 detection):
+   - `{{BACKEND_SPECIALTY}}` → e.g., "C# / ASP.NET Core 8 / EF Core / PostgreSQL"
+   - `{{FRONTEND_SPECIALTY}}` → e.g., "React 18 / TypeScript / TailwindCSS"
+   - `{{QA_SPECIALTY}}` → e.g., "NUnit / Moq / integration testing"
 
-## Agents
+   Content (copy `templates/BEHAVIOR.md` verbatim with placeholders substituted, wrapped in the
+   markers):
+   ```markdown
+   <!-- NIRVANA:START (do not edit by hand — regenerated by /light) -->
+   [... full contents of templates/BEHAVIOR.md, placeholders filled ...]
+   <!-- NIRVANA:END -->
+   ```
 
-| Role | Specialty | Memory |
-|------|-----------|--------|
-| Backend Dev | {{BACKEND_SPECIALTY}} | `~/.claude/agents-memory/backend-dev.md` |
-| Frontend Dev | {{FRONTEND_SPECIALTY}} | `~/.claude/agents-memory/frontend-dev.md` |
-| QA | {{QA_SPECIALTY}} | `~/.claude/agents-memory/qa.md` |
-| Business Analyst | Rules accumulated from sessions | `~/.claude/agents-memory/business-analyst.md` |
+### 5b — Create .claude/state.json
 
-## Broker Protocol
+Copy `templates/state.json`, substituting `SYNC_EVERY`, `COMPACT_AUTO`, `COMPACT_THRESHOLD` from
+Step 4 answers, and project info from Step 2. Keep the `graphify`, `agents`, and `tasks` blocks
+from the template as-is (only specialty placeholders get filled).
 
-### Pre-step (haiku — cheap)
-Before calling any agent, broker reads the relevant agent memory file with haiku and produces a 2-3 line summary. Inject that summary into the actual agent prompt.
+On UPDATE re-runs: preserve `sync.sessionCount` and `sync.lastSync` from the existing file.
 
-### Task flow
-1. Broker/haiku — reads relevant memories, produces summaries
-2. Architect/haiku — structural impact, layers, contracts
-3. Business Analyst/haiku — scope, business rules validation
-4. Backend Dev or Frontend Dev — implementation viability
-5. QA — risks, edge cases
+### 5c — Create docs/ skeleton (skip files that already exist)
 
-### Internal communication (broker relays — no direct channel)
-Agents do not talk to each other. Broker compresses each output and injects into the next:
-```
-[arch→dev] entity X add field Y:type; repo change; migration needed
-[dev→qa] impl ok; risk: Z
-[qa→arch] edge: W; needs decision
-```
+Copy from `templates/docs/`:
+- `architecture.md`, `modules.md`, `decisions.md` → `docs/`
+- `knowledge/errors-aprendidos.md`, `knowledge/patterns.md`, `knowledge/business-rules.md` → `docs/knowledge/`
+- `sprints/sprint-template.md` → `docs/sprints/sprint-template.md` (kept as a template, not a real sprint)
+- `tasks/task-template.md` → `docs/tasks/task-template.md` (kept as a template, not a real task)
 
-### Output format
-```
-## Team Conclusion
-[consolidated summary]
+Substitute `{{STACK_SUMMARY}}` in `architecture.md` from Step 2 detection.
 
-## Session Checklist
-- [x] What was done (file/agent)
-- [ ] Pending (if any)
+### 5d — Initialize graphify on docs/knowledge
 
-## Pending Decision
-[what the user needs to decide — if any]
-```
+Run `/graphify docs/knowledge` once so the shared knowledge graph exists from session one (it
+will be near-empty until the Writer starts documenting, but the graph structure and
+`graphify-out/` are ready). If the `graphify` command is unavailable, skip this silently and
+note it in the final report — the Writer will initialize it on first use instead.
 
-**Rule:** after all agents respond, broker ALWAYS builds the checklist before ending the turn.
+### 5e — Wire the SessionStart banner (terminal design on entry)
 
-## Language
+Copy the right script for the user's OS into the project:
+- Windows → `templates/hooks/nirvana-banner.ps1` → `.claude/hooks/nirvana-banner.ps1`
+- macOS/Linux → `templates/hooks/nirvana-banner.sh` → `.claude/hooks/nirvana-banner.sh` (make it
+  executable: `chmod +x .claude/hooks/nirvana-banner.sh`)
 
-Always respond in the same language the user writes in. If the user writes in Portuguese, respond in Portuguese. If in English, respond in English. If they mix languages in the same message, use the dominant one. Never assume a fixed language.
+Then wire it into `.claude/settings.json` as a `SessionStart` hook. This file may already exist
+with unrelated hooks (e.g. other plugins) — **merge, never overwrite**:
 
-## Caveman Mode
+1. If `.claude/settings.json` doesn't exist, create it with just the `hooks.SessionStart` block
+   below.
+2. If it exists, read it, and:
+   - If `hooks.SessionStart` doesn't exist yet, add it.
+   - If it exists as an array, APPEND a new entry to it — do not replace or remove existing
+     entries.
+   - Leave every other key in the file (`permissions`, `statusLine`, other hook events, etc.)
+     completely untouched.
 
-Caveman mode is ALWAYS active (full). Never deactivate unless user explicitly says "stop caveman" or "normal mode".
-
-## Task Conventions
-
-- `/bigtask [description]` — activates grill-me automatically. First question is always the business rule. Optional flags: `/agents backend,qa` or `/context phase2`
-- `/smalltask [description]` — executes directly, no grill. Use for clear, unambiguous tasks.
-
-## Compact & Sync
-
-- Auto-compact threshold and sync frequency are in `.claude/state.json`
-- On session end: broker updates agent memories, increments sessionCount
-- When sessionCount >= sync.every: broker reads all agent memories and synthesizes docs/
-- On compact: save all agent memories first, then compact
-
-## Commit Rules
-
-Agents do not appear in git history. Conventional Commits:
-```
-feat: description
-fix: description
-refactor: description
-test: description
-```
-```
-
-### 5b — Update project CLAUDE.md
-
-Read existing `CLAUDE.md` in project root.
-
-Check if the string `@.claude/BEHAVIOR.md` already exists in the file.
-
-If NOT present: append this exact line at the very end of the file:
-```
-@.claude/BEHAVIOR.md
-```
-
-If no `CLAUDE.md` exists: create one with this content:
-```markdown
-# CLAUDE.md
-
-This project uses Nirvana. See .claude/BEHAVIOR.md for agent and broker configuration.
-
-@.claude/BEHAVIOR.md
-```
-
-### 5c — Create .claude/state.json
-
-Write this file, substituting SYNC_EVERY and COMPACT_THRESHOLD from Step 4 answers, and project info from Step 2:
-
+The hook entry to add (Windows):
 ```json
 {
-  "nirvana": "1.0.0",
-  "sync": {
-    "every": SYNC_EVERY,
-    "sessionCount": 0,
-    "lastSync": null
-  },
-  "compact": {
-    "auto": COMPACT_AUTO,
-    "threshold": COMPACT_THRESHOLD
-  },
-  "preferences": {
-    "caveman": "full",
-    "language": "auto"
-  },
-  "project": {
-    "type": "PROJECT_TYPE",
-    "stack": ["STACK_ITEMS"],
-    "docsPath": "docs/"
-  },
-  "agents": {
-    "backendDev": {
-      "active": true,
-      "specialty": "BACKEND_SPECIALTY"
-    },
-    "frontendDev": {
-      "active": true,
-      "specialty": "FRONTEND_SPECIALTY"
-    },
-    "qa": {
-      "active": true,
-      "specialty": "QA_SPECIALTY"
-    },
-    "businessAnalyst": {
-      "active": true
+  "hooks": [
+    {
+      "type": "command",
+      "command": "powershell -ExecutionPolicy Bypass -File \".claude/hooks/nirvana-banner.ps1\"",
+      "shell": "powershell",
+      "timeout": 10
     }
-  },
-  "tasks": {
-    "bigtaskAutoGrill": true,
-    "smalltaskAutoExecute": true
-  }
+  ]
 }
 ```
 
-### 5d — Create docs/ skeleton (skip files that already exist)
-
-Create `docs/architecture.md`:
-```markdown
-# Architecture
-
-> Maintained by Nirvana. Updated automatically every N sessions via /reflect.
-> Last updated: never — run /reflect to generate first synthesis.
-
-## Stack
-[Detected: STACK_SUMMARY]
-
-## Project Structure
-<!-- Auto-fill: run /reflect after first few sessions -->
-
-## Key Layers
-<!-- Auto-fill: run /reflect after first few sessions -->
-
-## External Dependencies
-<!-- Auto-fill: run /reflect after first few sessions -->
+The hook entry to add (macOS/Linux):
+```json
+{
+  "hooks": [
+    {
+      "type": "command",
+      "command": "bash .claude/hooks/nirvana-banner.sh",
+      "timeout": 10
+    }
+  ]
+}
 ```
 
-Create `docs/modules.md`:
-```markdown
-# Modules
+Pick the OS-appropriate command based on the platform this session is running on. The script
+itself reads `.claude/state.json` and prints nothing if `preferences.entryBanner` is `false` —
+so wiring the hook is safe even for users who turn the banner off later.
 
-> Maintained by Nirvana. Populated as agents work on each module.
+### 5f — Update ~/.claude/CLAUDE.md
 
-<!-- Each module added here as Backend Dev / Architect agents document their work -->
-```
+Read `~/.claude/CLAUDE.md`. Find the section that defines agents (look for "Nirvana Agents",
+"O Time", or a table with agent roles).
 
-Create `docs/decisions.md`:
-```markdown
-# Architecture Decisions
-
-> Maintained by Nirvana. Each significant decision logged here by the broker.
-
-| Date | Decision | Reason | Agent |
-|------|----------|--------|-------|
-| — | — | — | — |
-```
-
-### 5e — Update ~/.claude/CLAUDE.md
-
-Read `~/.claude/CLAUDE.md`. Find the section that defines agents (look for "O Time" or a table with agent roles).
-
-Replace the agents table with this generic Nirvana table (preserve all other content around it):
+Replace that table with this generic Nirvana table (preserve all other content around it):
 
 ```markdown
 ## Nirvana Agents
 
-| Role | File | Model |
-|------|------|-------|
-| Architect | architect (structural decisions) | haiku |
-| Backend Dev | backend-dev (language/framework specialist — see project BEHAVIOR.md) | sonnet |
-| Frontend Dev | frontend-dev (UI specialist — see project BEHAVIOR.md) | sonnet |
-| QA | qa (testing specialist — see project BEHAVIOR.md) | sonnet |
-| Business Analyst | business-analyst (business rules accumulator) | haiku |
+| # | Role | Model | Action |
+|---|------|-------|--------|
+| 1 | Product Owner | opus | decides & approves, never implements |
+| 2 | Tech Lead | opus | orients, breaks into tasks, decides viability |
+| 3 | Architect | sonnet | designs structure — back + front |
+| 4 | Dev Backend | sonnet | implements backend (see project CLAUDE.md) |
+| 5 | Dev Frontend | sonnet | implements frontend/UI (see project CLAUDE.md) |
+| 6 | Designer | sonnet | UX/UI, flows, visual guidelines |
+| 7 | QA | sonnet | tests, validates acceptance criteria |
+| 8 | Reader | haiku | read-only — maps the project, hands off to Writer |
+| 9 | Writer | sonnet | sole writer of shared memory; indexes it in graphify |
+
+Full specs: `templates/agents/<name>.md` in the Nirvana repo. Chain order, memory model
+(graphify, shared — not per-agent files), and broker protocol: see the project's own
+`CLAUDE.md`, inside the `NIRVANA:START`/`NIRVANA:END` block.
 ```
 
-If the global CLAUDE.md does not exist: create it with just the Nirvana agent table and broker protocol from 5a.
-
-### 5f — Create agent memory files (only if they don't exist)
-
-Create `~/.claude/agents-memory/backend-dev.md` if not exists:
-```markdown
----
-agent: backend-dev
-specialty: {{BACKEND_SPECIALTY}}
----
-
-No sessions yet. Memory accumulates as work happens.
-```
-
-Create `~/.claude/agents-memory/frontend-dev.md` if not exists:
-```markdown
----
-agent: frontend-dev
-specialty: {{FRONTEND_SPECIALTY}}
----
-
-No sessions yet. Memory accumulates as work happens.
-```
-
-Create `~/.claude/agents-memory/qa.md` if not exists:
-```markdown
----
-agent: qa
-specialty: {{QA_SPECIALTY}}
----
-
-No sessions yet. Memory accumulates as work happens.
-```
-
-Create `~/.claude/agents-memory/business-analyst.md` if not exists:
-```markdown
----
-agent: business-analyst
----
-
-## Business Rules
-
-No rules yet. Rules accumulate via /law command and /bigtask first questions.
-
-## Inferred Rules
-
-None yet.
-```
+If the global CLAUDE.md does not exist: create it with just the Nirvana agent table above.
 
 ## STEP 6 — Show tutorial
 
@@ -356,27 +247,37 @@ Display exactly this in the terminal:
   5 things to know:
 
   1. /bigtask [description]
-     grill-me activates automatically.
-     First question is always the business rule.
+     Runs the full 9-agent chain: PO → Reader → Writer → Tech Lead →
+     Architect → Tech Lead → PO (approve) → Devs/Designer → QA → Writer → Broker.
+     grill-me activates automatically. First question always becomes a
+     business rule for the PO.
      Optional: /bigtask fix auth /agents backend,qa /context phase2
 
   2. /smalltask [description]
-     Executes directly. No grilling. Use for clear tasks.
+     Same chain, no grilling. Use for clear, unambiguous tasks.
 
   3. Caveman mode is active (full).
      To disable: type  stop caveman
      To change level: /caveman lite | full | ultra
 
-  4. Docs sync automatically every N sessions.
-     Force sync now: /reflect
+  4. Memory is shared, not per-agent. The Writer documents everything into
+     docs/knowledge/ and indexes it in graphify. Everyone else queries it
+     with /graphify query — nobody else writes to it.
 
-  5. Business rules accumulate automatically.
-     Add explicitly: /law [rule description]
+  5. Sprints and tasks live in docs/sprints/ and docs/tasks/ — one file
+     each, created by the Tech Lead, approved by the PO, closed by the Writer.
+
+  Bonus:
+    - You only see the final result by default. Add /chat to any /bigtask or
+      /smalltask to watch the agents hand off live, chat-style. Make it the
+      default with preferences.chainVisibility: "visible" in state.json.
+    - Every time you open this project, a Nirvana banner shows sprint/task
+      status. Turn it off with preferences.entryBanner: false in state.json.
 
   Other commands:
-    /karma   — status (agents, docs, sessions, last sync)
+    /karma   — status (agents, docs, sessions, last sync, graphify)
     /path    — view/hint config (.claude/state.json)
-    /reflect — sync docs from agent memories now
+    /reflect — sync docs from graphify now
 
   Edit preferences: .claude/state.json
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

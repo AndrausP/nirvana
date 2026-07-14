@@ -1,27 +1,33 @@
 # Nirvana
 
-> Multi-agent Claude Code workspace system. Route tasks through specialized agents, accumulate business rules, auto-sync architecture docs, and save tokens via smart compaction — for **any project, any tech stack**.
+> Multi-agent Claude Code workspace system. Routes tasks through a 9-role chain — Product Owner
+> to Writer — with shared memory indexed by [graphify](https://github.com/Graphify-Labs/graphify),
+> sprint/task tracking, and token-saving compaction — for **any project, any tech stack**.
 
 ---
 
 ## What it does
 
 When you type `/bigtask add OAuth login`, Nirvana:
-1. Asks for the **business rule** (captured by the Business Analyst agent)
+1. Asks for the **business rule** (becomes the Product Owner's acceptance criteria)
 2. Runs **grill-me** to stress-test your design
-3. Routes through **Architect → BA → Backend Dev → QA**
+3. Runs the full chain, each agent handing off to the next:
+   **Broker → Product Owner → Reader → Writer → Tech Lead → Architect → Tech Lead →
+   Product Owner (approve) → Dev Backend / Dev Frontend / Designer → QA → Writer → Broker**
 4. Delivers a consolidated conclusion + session checklist
-5. Updates agent memories so the next task has full context
+5. The Writer documents everything into `docs/knowledge/` and reindexes the shared graphify graph
 
-When your session ends, Nirvana saves agent memories and compacts context — so you never lose work and always start the next session with context intact.
+When your session ends, the Writer makes sure anything worth remembering is already indexed —
+so the next session starts with full shared context, not a stale per-agent memory file.
 
 ---
 
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) installed and authenticated
-
-That's it.
+- [graphify](https://github.com/Graphify-Labs/graphify) available (`pip install graphifyy` or
+  `uv tool install graphifyy`) — powers the shared memory. Nirvana still works without it, the
+  Writer just falls back to plain markdown in `docs/knowledge/` with no graph index.
 
 ---
 
@@ -39,8 +45,11 @@ curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/install.sh | 
 
 The installer:
 1. Checks that Claude Code is installed
-2. Creates `~/.claude/skills/` if it doesn't exist
-3. Downloads and installs all 7 Nirvana skills globally
+2. Creates `~/.claude/skills/` if it doesn't exist, installs all 7 Nirvana skills globally
+3. Creates `~/.claude/nirvana-templates/` and installs the templates `/light` needs (agent
+   specs, BEHAVIOR.md, docs skeleton, banner hook scripts) — skills alone aren't enough, `/light`
+   runs inside your project, not inside the Nirvana repo, so the templates it copies from have
+   to live somewhere global too
 
 You only do this **once per machine**.
 
@@ -56,10 +65,15 @@ After installing, open Claude Code inside **any project** and run:
 
 Nirvana will:
 1. Detect your project stack (reads folder structure and key files only — no full code scan)
-2. Show you exactly what it's about to do and ask for confirmation
-3. Ask 2 questions: sync frequency and compact threshold
-4. Create all config files
-5. Show a tutorial
+2. Read your existing `CLAUDE.md` and merge the broker protocol directly into it — between
+   markers, nothing else touched. No separate `BEHAVIOR.md`, no `@import`.
+3. Show you exactly what it's about to do and ask for confirmation
+4. Ask 2 questions: sync frequency and compact threshold
+5. Create `docs/` (architecture, modules, decisions, sprints/, tasks/, knowledge/) and
+   initialize graphify over `docs/knowledge/`
+6. Wire a banner into `.claude/settings.json` (`SessionStart` hook) that shows sprint/task
+   status every time you open the project — merged in, any existing hooks stay untouched
+7. Show a tutorial
 
 **That's it. Nirvana is active.**
 
@@ -68,14 +82,15 @@ Nirvana will:
 ## Commands
 
 ### `/light`
-Initialize Nirvana for the current project. Run once. Re-run to update configuration.
+Initialize Nirvana for the current project. Run once. Re-run to update configuration — only the
+Nirvana-owned block inside your `CLAUDE.md` gets regenerated, everything else is preserved.
 
 ```
 /light
 ```
 
 ### `/bigtask`
-For features, refactors, architecture changes — anything with impact.
+For features, refactors, architecture changes — anything with impact. Runs the full 9-agent chain.
 
 grill-me activates automatically. **First question is always the business rule.**
 
@@ -86,11 +101,11 @@ grill-me activates automatically. **First question is always the business rule.*
 ```
 
 Optional flags:
-- `/agents backend,qa` — hint which agents to involve (broker decides if omitted)
-- `/context phase4` — extra context for the broker
+- `/agents backend,qa` — hint which agents to involve (Tech Lead decides if omitted)
+- `/context phase4` — extra context for the chain
 
 ### `/smalltask`
-For clear, unambiguous tasks. No grilling. Direct execution.
+For clear, unambiguous tasks. No grilling. Still runs the chain, just without the interview.
 
 ```
 /smalltask fix null check in UserService
@@ -98,14 +113,16 @@ For clear, unambiguous tasks. No grilling. Direct execution.
 ```
 
 ### `/reflect`
-Force an immediate doc sync from agent memories. Useful before a sprint review or when docs are stale.
+Force an immediate doc sync from the shared graphify-indexed knowledge base. Useful before a
+sprint review or when docs are stale.
 
 ```
 /reflect
 ```
 
 ### `/law`
-Register an explicit business rule. The Business Analyst will validate all future tasks against it.
+Register an explicit business rule directly into `docs/knowledge/business-rules.md`. The
+Product Owner validates all future tasks against it.
 
 ```
 /law payment can only be made by verified users
@@ -114,7 +131,7 @@ Register an explicit business rule. The Business Analyst will validate all futur
 ```
 
 ### `/karma`
-Full system status — agents, sessions, docs, last sync, compact settings.
+Full system status — 9 agents, sessions, docs, last sync, graphify status, open sprints/tasks.
 
 ```
 /karma
@@ -129,77 +146,109 @@ Show current config from `.claude/state.json` in a readable format.
 
 ---
 
-## The 4 Agents
+## The 9 Agents
 
-Nirvana uses 4 role-based agents. Their **specialty is auto-detected** from your project stack during `/light` and stored in `.claude/state.json`.
+Nirvana runs a **sequential chain**, not a hub-and-spoke broker — each agent hands off to the
+next, and only the final decision returns to the broker. Every agent has exactly one job; no
+two agents overlap in responsibility.
 
-| Agent | Role | Memory file |
-|-------|------|-------------|
-| **Backend Dev** | Code, APIs, DB, infrastructure | `~/.claude/agents-memory/backend-dev.md` |
-| **Frontend Dev** | UI, components, styling, UX | `~/.claude/agents-memory/frontend-dev.md` |
-| **QA** | Tests, edge cases, risk analysis | `~/.claude/agents-memory/qa.md` |
-| **Business Analyst** | Accumulates and validates business rules | `~/.claude/agents-memory/business-analyst.md` |
+| # | Agent | Model | Action |
+|---|-------|-------|--------|
+| 1 | **Product Owner** | opus | Decides & approves. Never implements. |
+| 2 | **Tech Lead** | opus | Orients, breaks work into tasks, decides technical viability. |
+| 3 | **Architect** | sonnet | Designs structure — back + front — contracts, schema, layers. |
+| 4 | **Dev Backend** | sonnet | Implements backend, code/APIs/DB. |
+| 5 | **Dev Frontend** | sonnet | Implements frontend/UI. |
+| 6 | **Designer** | sonnet | UX/UI flows, wireframes, visual guidelines. |
+| 7 | **QA** | sonnet | Tests, validates acceptance criteria, edge cases. |
+| 8 | **Reader** | haiku | Read-only. Maps the project, hands raw findings to the Writer. |
+| 9 | **Writer** | sonnet | Sole writer of shared memory. Documents everything, indexes graphify. |
 
-Examples of auto-detected specialties:
-- C# project → Backend Dev = "C# / ASP.NET Core 8 / EF Core"
-- Python project → Backend Dev = "Python / FastAPI / SQLAlchemy"
-- React project → Frontend Dev = "React 18 / TypeScript / TailwindCSS"
-
-Agents accumulate memory across sessions. The broker reads their memory (cheap haiku call) before every task — so context from 10 sessions ago is still available.
+Architect / Dev Backend / Dev Frontend / QA have their **specialty auto-detected** from your
+project stack during `/light` and stored in `.claude/state.json`. Full spec of each role:
+`templates/agents/<name>.md`.
 
 ---
 
-## How the Broker works
-
-Every task routes through the broker:
+## How the chain works
 
 ```
-1. Broker/haiku   → reads relevant agent memories, produces 2-line summaries
-2. Architect/haiku → structural impact, layers, contracts
-3. BA/haiku        → validates against known business rules
-4. Backend/Frontend → implementation plan
-5. QA              → risks, edge cases, test strategy
+1. Broker/sonnet-5      → polish the user's idea, query graphify for context
+2. Product Owner/opus   → business objective + acceptance criteria; asks Reader to map context
+3. Reader/haiku         → reads the project (read-only), hands raw findings to Writer
+4. Writer/sonnet        → organizes findings into a digest
+5. Tech Lead/opus       → breaks into tasks (docs/tasks/), sends to Architect
+6. Architect/sonnet     → structural decision per task (contracts, schema, layers)
+7. Tech Lead/opus       → consolidates Architect's decisions
+8. Product Owner/opus   → approves, or sends back to step 5 with a reason
+9. Dev Backend / Dev Frontend / Designer → implement the approved task
+10. QA/sonnet           → tests; failure goes back to the responsible Dev, not forward
+11. Writer/sonnet       → documents errors/patterns/decisions, reindexes graphify
+12. Broker/sonnet-5     → assembles the final answer for the user
 ```
-
-Agents **don't communicate directly**. Broker compresses each output and injects it into the next agent's prompt. No context bloat.
 
 Every turn ends with:
 ```
-## Team Conclusion
+## Conclusão do time
 [consolidated summary]
 
-## Session Checklist
+## Checklist da sessão
 - [x] done
 - [ ] pending
 
-## Pending Decision
-[what you need to decide — or "None"]
+## Decisão pendente
+[what you need to decide — or "Nenhuma"]
 ```
 
 ---
 
-## Business Analyst
+## Memory — shared via graphify, not per-agent
 
-The BA is the memory of your product's rules. It learns two ways:
+There is no more `~/.claude/agents-memory/<agent>.md` per agent. All memory is shared:
 
-1. **Explicit** — `/law [rule]` stores it immediately
-2. **Captured** — first question of every `/bigtask` captures the business rule for that task
-
-Rules persist across sessions. On every `/bigtask`, the BA validates the new task against all accumulated rules and flags conflicts.
+- The **Writer** is the only agent that writes. It persists into `docs/knowledge/`:
+  - `errors-aprendidos.md` — root cause of bugs fixed
+  - `patterns.md` — project conventions and patterns
+  - `business-rules.md` — business rules (replaces the old standalone Business Analyst)
+  - `docs/decisions.md` — architecture decisions log
+- After writing, the Writer runs `/graphify docs/knowledge --update` to keep the shared graph
+  current.
+- **Every other agent only queries**: `/graphify query "<question>"` — nobody else writes.
+- The **Reader** is the only agent allowed to scan the raw project (code, files) when the graph
+  doesn't cover what's needed — always hands off to the Writer, never decides alone.
 
 ---
 
-## Docs auto-sync
+## Sprints & Tasks
 
-After every N sessions (you choose during `/light`), the broker reads all agent memories and writes:
+- `docs/sprints/sprint-{N}.md` — one file per sprint: goal, included tasks, status.
+- `docs/tasks/{id}-{slug}.md` — one file per task: description, acceptance criteria, chain
+  trace (Architect's decision, Dev's notes, QA's result), status.
+- The **Tech Lead** creates them, the **Product Owner** approves inside the file, **Devs/QA**
+  update them, the **Writer** closes and indexes them.
 
-| File | Contents |
-|------|----------|
-| `docs/architecture.md` | Stack, layers, structure, dependencies |
-| `docs/modules.md` | Modules and their status |
-| `docs/decisions.md` | Architectural decisions log with dates |
+---
 
-Force sync anytime: `/reflect`
+## Chat visibility & entry banner
+
+Two opt-in UI touches on top of the chain:
+
+**See the agents talk (off by default).** Normally you only see the final "Conclusão do time".
+Add `/chat` to any `/bigtask` or `/smalltask` to watch each handoff live as it happens:
+```
+━━ Cadeia ao vivo ━━
+[1/12] Product Owner (opus)   → objetivo: ...
+[2/12] Reader (haiku)         → lendo módulo X...
+[3/12] Writer (sonnet)        → digest: padrão P encontrado
+...
+━━━━━━━━━━━━━━━━━━━━━━
+```
+Make it the default for every run: set `preferences.chainVisibility: "visible"` in
+`.claude/state.json` (default is `"hidden"`).
+
+**Terminal banner on entry (on by default).** Every time you open Claude Code in a
+Nirvana-configured project, a banner shows the current sprint, task counts, and whether chat
+visibility is on. Turn it off: `preferences.entryBanner: false` in `.claude/state.json`.
 
 ---
 
@@ -212,9 +261,9 @@ Nirvana saves tokens two ways:
 - Change level: `/caveman lite` | `/caveman full` | `/caveman ultra`
 
 **2. Smart compaction** — when context exceeds your threshold:
-1. Agent memories are saved first (nothing lost)
+1. The Writer indexes anything pending into graphify first (nothing lost)
 2. `/compact` runs — context is summarized
-3. Next message starts fresh with full memory access
+3. Next message starts fresh, memory still queryable via graphify
 
 Both are configurable in `.claude/state.json`.
 
@@ -225,20 +274,30 @@ Both are configurable in `.claude/state.json`.
 **In your project:**
 ```
 your-project/
-├── CLAUDE.md                 ← @import .claude/BEHAVIOR.md appended here
+├── CLAUDE.md                     ← Nirvana block merged in, between NIRVANA:START/END markers
 ├── .claude/
-│   ├── BEHAVIOR.md           ← broker protocol + agent specialties (generated)
-│   └── state.json            ← Nirvana config (edit freely)
+│   └── state.json                ← Nirvana config (edit freely)
 └── docs/
-    ├── architecture.md       ← auto-maintained by /reflect
-    ├── modules.md            ← auto-maintained by /reflect
-    └── decisions.md          ← auto-maintained by /reflect
+    ├── architecture.md           ← auto-maintained by /reflect
+    ├── modules.md                ← auto-maintained by /reflect
+    ├── decisions.md              ← auto-maintained by /reflect
+    ├── sprints/                  ← one file per sprint (Tech Lead creates, PO approves)
+    ├── tasks/                    ← one file per task (chain trace, status)
+    └── knowledge/                ← graphify-indexed shared memory
+        ├── errors-aprendidos.md
+        ├── patterns.md
+        └── business-rules.md
+.claude/
+├── state.json
+├── settings.json                 ← SessionStart hook merged in here (existing hooks preserved)
+└── hooks/
+    └── nirvana-banner.ps1        ← or .sh on macOS/Linux
 ```
 
 **Global (shared across all your projects):**
 ```
 ~/.claude/
-├── CLAUDE.md                 ← Nirvana agent table added here
+├── CLAUDE.md                     ← Nirvana 9-agent table added here
 ├── skills/
 │   ├── light/SKILL.md
 │   ├── bigtask/SKILL.md
@@ -247,11 +306,14 @@ your-project/
 │   ├── law/SKILL.md
 │   ├── path/SKILL.md
 │   └── karma/SKILL.md
-└── agents-memory/
-    ├── backend-dev.md        ← grows over time
-    ├── frontend-dev.md       ← grows over time
-    ├── qa.md                 ← grows over time
-    └── business-analyst.md  ← grows over time
+└── nirvana-templates/            ← what /light actually copies from
+    ├── BEHAVIOR.md
+    ├── state.json
+    ├── docs/...
+    ├── agents/...
+    └── hooks/
+        ├── nirvana-banner.ps1
+        └── nirvana-banner.sh
 ```
 
 ---
@@ -262,7 +324,7 @@ Edit `.claude/state.json` directly to change any preference:
 
 ```jsonc
 {
-  "nirvana": "1.0.0",
+  "nirvana": "2.0.0",
   "sync": {
     "every": 5,           // sessions between auto doc syncs
     "sessionCount": 0,    // managed by Nirvana — don't edit
@@ -273,23 +335,39 @@ Edit `.claude/state.json` directly to change any preference:
     "threshold": 70       // compact when context > 70%
   },
   "preferences": {
-    "caveman": "full",    // lite | full | ultra | off
-    "language": "auto"    // auto = matches your message language
+    "caveman": "full",         // lite | full | ultra | off
+    "language": "auto",        // auto = matches your message language
+    "chainVisibility": "hidden", // hidden | visible — see agents hand off live (or use /chat per run)
+    "entryBanner": true        // show Nirvana banner on SessionStart
   },
   "project": {
     "type": "web-api",
     "stack": ["aspnet8", "postgresql", "react18"],
     "docsPath": "docs/"
   },
+  "graphify": {
+    "enabled": true,
+    "source": "docs/knowledge",
+    "outPath": "graphify-out/",
+    "owner": "writer",
+    "lastIndexed": null
+  },
   "agents": {
-    "backendDev":       { "active": true, "specialty": "C# / ASP.NET Core 8" },
-    "frontendDev":      { "active": true, "specialty": "React 18 / TypeScript" },
-    "qa":               { "active": true, "specialty": "NUnit / Moq" },
-    "businessAnalyst":  { "active": true }
+    "productOwner":  { "active": true, "model": "opus" },
+    "techLead":      { "active": true, "model": "opus" },
+    "architect":     { "active": true, "model": "sonnet", "specialty": "C# / ASP.NET Core 8 + React 18" },
+    "devBackend":    { "active": true, "model": "sonnet", "specialty": "C# / ASP.NET Core 8" },
+    "devFrontend":   { "active": true, "model": "sonnet", "specialty": "React 18 / TypeScript" },
+    "designer":      { "active": true, "model": "sonnet" },
+    "qa":            { "active": true, "model": "sonnet", "specialty": "NUnit / Moq" },
+    "reader":        { "active": true, "model": "haiku" },
+    "writer":        { "active": true, "model": "sonnet" }
   },
   "tasks": {
     "bigtaskAutoGrill": true,
-    "smalltaskAutoExecute": true
+    "smalltaskAutoExecute": true,
+    "tasksPath": "docs/tasks/",
+    "sprintsPath": "docs/sprints/"
   }
 }
 ```
@@ -302,8 +380,8 @@ Edit `.claude/state.json` directly to change any preference:
 nirvana/
 ├── README.md
 ├── install.ps1              ← Windows installer
-├── install.sh               ← macOS/Linux installer
-├── skills/                  ← skill source files
+├── install.sh                ← macOS/Linux installer
+├── skills/                   ← skill source files
 │   ├── light/SKILL.md
 │   ├── bigtask/SKILL.md
 │   ├── smalltask/SKILL.md
@@ -311,19 +389,37 @@ nirvana/
 │   ├── law/SKILL.md
 │   ├── path/SKILL.md
 │   └── karma/SKILL.md
-└── templates/               ← used by /light to generate project files
-    ├── BEHAVIOR.md
+└── templates/                ← used by /light to generate project files
+    ├── BEHAVIOR.md           ← source of the NIRVANA:START/END block merged into CLAUDE.md
     ├── state.json
     ├── docs/
     │   ├── architecture.md
     │   ├── modules.md
-    │   └── decisions.md
-    └── agents/
-        ├── backend-dev.md
-        ├── frontend-dev.md
-        ├── qa.md
-        └── business-analyst.md
+    │   ├── decisions.md
+    │   ├── sprints/sprint-template.md
+    │   ├── tasks/task-template.md
+    │   └── knowledge/
+    │       ├── errors-aprendidos.md
+    │       ├── patterns.md
+    │       └── business-rules.md
+    ├── agents/
+    │   ├── product-owner.md
+    │   ├── tech-lead.md
+    │   ├── architect.md
+    │   ├── dev-backend.md
+    │   ├── dev-frontend.md
+    │   ├── designer.md
+    │   ├── qa.md
+    │   ├── reader.md
+    │   └── writer.md
+    └── hooks/
+        ├── nirvana-banner.ps1
+        └── nirvana-banner.sh
 ```
+
+`install.ps1`/`install.sh` mirror the whole `templates/` tree into
+`~/.claude/nirvana-templates/` — that's what `/light` actually reads from at runtime (see the
+note at the top of `skills/light/SKILL.md`).
 
 ---
 

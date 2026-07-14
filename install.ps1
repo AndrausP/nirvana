@@ -3,9 +3,20 @@
 
 $ErrorActionPreference = "Stop"
 
-$NIRVANA_VERSION = "1.0.0"
+$NIRVANA_VERSION = "2.0.0"
 $SKILLS_DIR = "$HOME\.claude\skills"
+$TEMPLATES_DIR = "$HOME\.claude\nirvana-templates"
 $SKILLS = @("light", "bigtask", "smalltask", "reflect", "law", "path", "karma")
+$TEMPLATE_FILES = @(
+    "BEHAVIOR.md", "state.json",
+    "docs/architecture.md", "docs/modules.md", "docs/decisions.md",
+    "docs/knowledge/errors-aprendidos.md", "docs/knowledge/patterns.md", "docs/knowledge/business-rules.md",
+    "docs/sprints/sprint-template.md", "docs/tasks/task-template.md",
+    "agents/product-owner.md", "agents/tech-lead.md", "agents/architect.md",
+    "agents/dev-backend.md", "agents/dev-frontend.md", "agents/designer.md",
+    "agents/qa.md", "agents/reader.md", "agents/writer.md",
+    "hooks/nirvana-banner.ps1", "hooks/nirvana-banner.sh"
+)
 $REPO_RAW = "https://raw.githubusercontent.com/AndrausP/nirvana/main"
 
 Write-Host ""
@@ -46,6 +57,33 @@ foreach ($skill in $SKILLS) {
         Write-Host "  /$skill installed" -ForegroundColor Green
     } catch {
         Write-Host "  /$skill FAILED: $_" -ForegroundColor Red
+        exit 1
+    }
+}
+
+Write-Host ""
+
+# Install templates (used by /light — must live outside the repo since /light
+# runs inside arbitrary target projects, not inside the Nirvana repo)
+if (-not (Test-Path $TEMPLATES_DIR)) {
+    New-Item -ItemType Directory -Force -Path $TEMPLATES_DIR | Out-Null
+}
+
+foreach ($tpl in $TEMPLATE_FILES) {
+    $tplPath = "$TEMPLATES_DIR\$($tpl -replace '/', '\')"
+    $tplDir = Split-Path $tplPath -Parent
+    if (-not (Test-Path $tplDir)) {
+        New-Item -ItemType Directory -Force -Path $tplDir | Out-Null
+    }
+
+    Write-Host "  Installing template $tpl..." -ForegroundColor Gray
+
+    try {
+        $content = Invoke-WebRequest -Uri "$REPO_RAW/templates/$tpl" -UseBasicParsing
+        Set-Content -Path $tplPath -Value $content.Content -Encoding UTF8
+        Write-Host "  $tpl installed" -ForegroundColor Green
+    } catch {
+        Write-Host "  $tpl FAILED: $_" -ForegroundColor Red
         exit 1
     }
 }

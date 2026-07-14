@@ -25,11 +25,21 @@ Show the config in a readable table format:
     Stack:  [project.stack joined with " + "]
     Docs:   [project.docsPath]
 
-  Agents
-    Backend Dev:  [agents.backendDev.specialty]
-    Frontend Dev: [agents.frontendDev.specialty]
-    QA:           [agents.qa.specialty]
-    BA:           active (rules in ~/.claude/agents-memory/business-analyst.md)
+  Agentes (modelo — cada um com ação única, ver templates/agents/)
+    1. Product Owner:  opus
+    2. Tech Lead:      opus
+    3. Architect:      sonnet — [agents.architect.specialty]
+    4. Dev Backend:    sonnet — [agents.devBackend.specialty]
+    5. Dev Frontend:   sonnet — [agents.devFrontend.specialty]
+    6. Designer:       sonnet
+    7. QA:             sonnet — [agents.qa.specialty]
+    8. Reader:         haiku (read-only)
+    9. Writer:         sonnet (única escrita — indexa em graphify)
+
+  Memória
+    graphify.enabled:   [true/false]
+    graphify.source:    [graphify.source]
+    graphify.lastIndexed: [graphify.lastIndexed or "never — run /reflect or let Writer index"]
 
   Sync
     Every:        [sync.every] sessions
@@ -43,10 +53,14 @@ Show the config in a readable table format:
   Tasks
     /bigtask → grill-me: [tasks.bigtaskAutoGrill]
     /smalltask → direct: [tasks.smalltaskAutoExecute]
+    Sprints:  [tasks.sprintsPath]
+    Tasks:    [tasks.tasksPath]
 
   Preferences
-    Caveman:  [preferences.caveman]
-    Language: [preferences.language]
+    Caveman:         [preferences.caveman]
+    Language:        [preferences.language]
+    Chat da cadeia:  [preferences.chainVisibility] (hidden|visible — ou use /chat por execução)
+    Banner ao entrar: [preferences.entryBanner] (true/false)
 
   To change: edit .claude/state.json directly
   To reconfigure: run /light

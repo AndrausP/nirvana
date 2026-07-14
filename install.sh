@@ -4,9 +4,20 @@
 
 set -e
 
-NIRVANA_VERSION="1.0.0"
+NIRVANA_VERSION="2.0.0"
 SKILLS_DIR="$HOME/.claude/skills"
+TEMPLATES_DIR="$HOME/.claude/nirvana-templates"
 SKILLS=("light" "bigtask" "smalltask" "reflect" "law" "path" "karma")
+TEMPLATE_FILES=(
+    "BEHAVIOR.md" "state.json"
+    "docs/architecture.md" "docs/modules.md" "docs/decisions.md"
+    "docs/knowledge/errors-aprendidos.md" "docs/knowledge/patterns.md" "docs/knowledge/business-rules.md"
+    "docs/sprints/sprint-template.md" "docs/tasks/task-template.md"
+    "agents/product-owner.md" "agents/tech-lead.md" "agents/architect.md"
+    "agents/dev-backend.md" "agents/dev-frontend.md" "agents/designer.md"
+    "agents/qa.md" "agents/reader.md" "agents/writer.md"
+    "hooks/nirvana-banner.ps1" "hooks/nirvana-banner.sh"
+)
 REPO_RAW="https://raw.githubusercontent.com/AndrausP/nirvana/main"
 
 echo ""
@@ -35,6 +46,23 @@ for skill in "${SKILLS[@]}"; do
     echo -n "  Installing /$skill..."
 
     if curl -fsSL "$REPO_RAW/skills/$skill/SKILL.md" -o "$skill_file"; then
+        echo " done"
+    else
+        echo " FAILED"
+        exit 1
+    fi
+done
+
+echo ""
+
+# Install templates (used by /light — must live outside the repo since /light
+# runs inside arbitrary target projects, not inside the Nirvana repo)
+mkdir -p "$TEMPLATES_DIR"
+for tpl in "${TEMPLATE_FILES[@]}"; do
+    tpl_dir="$TEMPLATES_DIR/$(dirname "$tpl")"
+    mkdir -p "$tpl_dir"
+    echo -n "  Installing template $tpl..."
+    if curl -fsSL "$REPO_RAW/templates/$tpl" -o "$TEMPLATES_DIR/$tpl"; then
         echo " done"
     else
         echo " FAILED"

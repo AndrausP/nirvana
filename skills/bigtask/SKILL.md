@@ -1,6 +1,6 @@
 ---
 name: bigtask
-description: Large task execution with automatic grill-me. First question captures the business rule for the Business Analyst. Use for features, refactors, or anything with architectural impact.
+description: Large task execution with automatic grill-me. First question captures the business rule for the Product Owner. Runs the full 9-agent chain. Use for features, refactors, or anything with architectural impact.
 ---
 
 You are executing a /bigtask. Arguments contain the task description and optional flags.
@@ -9,30 +9,28 @@ You are executing a /bigtask. Arguments contain the task description and optiona
 
 From the arguments, extract:
 - `TASK_DESCRIPTION`: the main task text
-- `AGENTS`: optional `/agents` flag (e.g., `/agents backend,qa`) — if absent, broker decides
+- `AGENTS`: optional `/agents` flag (e.g., `/agents backend,qa`) — if absent, Tech Lead decides during Step 5 of the chain
 - `CONTEXT`: optional `/context` flag (e.g., `/context phase4`) — additional context hint
+- `CHAT`: optional `/chat` flag — forces the live chain transcript on for this run only (see
+  "Chat visibility" below), regardless of `preferences.chainVisibility` in `.claude/state.json`
 
-## Pre-step: read relevant agent memories (use haiku)
+## Pre-step: consult graphify (Sonnet 5)
 
-Based on the task description, identify which agents are likely involved.
-Read their memory files and produce a 2-3 line summary for each:
-- `~/.claude/agents-memory/backend-dev.md`
-- `~/.claude/agents-memory/frontend-dev.md` (if UI involved)
-- `~/.claude/agents-memory/qa.md`
-- `~/.claude/agents-memory/business-analyst.md`
-- `~/.claude/agents-memory/architect.md` (if exists)
-
-Also read `.claude/state.json` to understand project context and active agent specialties.
+Memory is shared, not per-agent. Before anything else:
+1. If `graphify-out/graph.json` exists, run `/graphify query "<TASK_DESCRIPTION>"` to pull
+   relevant context (past decisions, patterns, known errors) — do NOT read flat per-agent
+   memory files, they no longer exist.
+2. Read `.claude/state.json` for project context and active agent config.
+3. Produce a 2-3 line summary of what's relevant. This is the seed the Product Owner starts from.
 
 ## Activate grill-me — first question is ALWAYS the business rule
 
 Before any other grill-me question, ask:
 
-"What is the business rule for this task? (This will be stored for the Business Analyst)"
+"What is the business rule for this task? (This becomes the Product Owner's acceptance criteria)"
 
-Wait for the answer. Save this rule to `~/.claude/agents-memory/business-analyst.md`:
-- If the answer is a clear rule: append to "## Business Rules" section with today's date and task reference
-- If vague or unknown: append to "## Inferred Rules" marked as `[pending-clarification]`
+Wait for the answer. This is the seed for Step 2 of the chain below — do not save it separately,
+it flows through the Product Owner into the task file the Writer creates in Step 5 of the chain.
 
 ## Continue with grill-me
 
@@ -43,31 +41,62 @@ After capturing the business rule, proceed with the full grill-me interview abou
 - Resolve dependencies between decisions
 - Stop when shared understanding is reached
 
-## After grill-me: execute with broker
+## Chat visibility
 
-Once grill-me completes, route the task through the broker:
+Read `preferences.chainVisibility` from `.claude/state.json` (default `"hidden"`). If it's
+`"visible"` OR the `/chat` flag was passed, print each chain step live as it completes, in the
+format below — one line per agent, in order, before the final "Conclusão do time" block. If
+`"hidden"` and no `/chat` flag: print nothing until the final block — the steps still all run,
+they're just not narrated.
 
-1. **Architect/haiku** — structural impact, layers affected, contracts needed
-2. **Business Analyst/haiku** — validate against known business rules
-3. **Backend Dev or Frontend Dev** — implementation plan
-4. **QA** — risks, edge cases, test strategy
+```
+━━ Cadeia ao vivo ━━
+[N/12] Agent Name (model) → one-line result
+...
+━━━━━━━━━━━━━━━━━━━━━━
+```
 
-Compress each agent's output before passing to the next.
+## After grill-me: run the full chain
+
+Once grill-me completes, run the sequential chain end to end — each step hands off to the next,
+nobody returns to the broker mid-chain:
+
+```
+1. Broker/sonnet-5      — seed from pre-step + grill-me outcome
+2. Product Owner/opus   — business objective + acceptance criteria; asks Reader to map context
+3. Reader/haiku         — reads project (read-only), hands raw findings to Writer
+4. Writer/sonnet        — organizes findings into a digest
+5. Tech Lead/opus       — breaks into tasks, creates docs/tasks/{id}-{slug}.md (sprint from
+                          docs/sprints/ if one is active, otherwise ask the user which sprint)
+6. Architect/sonnet     — structural decision per task (contracts, schema, layers)
+7. Tech Lead/opus       — consolidates Architect's decisions
+8. Product Owner/opus   — approves or sends back to step 5 with a reason
+9. Dev Backend / Dev Frontend / Designer (sonnet) — implement the approved task(s)
+10. QA/sonnet           — tests against acceptance criteria; failure sends it back to the
+                          responsible Dev, not forward
+11. Writer/sonnet       — documents errors/patterns/decisions in docs/knowledge/, updates the
+                          task file status, runs `/graphify docs/knowledge --update`
+12. Broker/sonnet-5     — receives Writer's confirmation, assembles the final answer
+```
+
+Compress each agent's output before passing it to the next (see the internal-communication
+format in the project's `NIRVANA:START` block of `CLAUDE.md`).
 
 ## End of turn
 
 Always close with:
 
 ```
-## Team Conclusion
+## Conclusão do time
 [consolidated summary]
 
-## Session Checklist
-- [x] [completed items]
+## Checklist da sessão
+- [x] [completed items — reference the task file(s) touched]
 - [ ] [pending items]
 
-## Pending Decision
-[what the user needs to decide — or "None"]
+## Decisão pendente
+[what the user needs to decide — or "Nenhuma"]
 ```
 
-Update relevant agent memory files with key decisions and context from this session.
+The Writer is the only one who persists anything — confirm `docs/knowledge/` and the task file
+in `docs/tasks/` were updated, and that graphify was reindexed.

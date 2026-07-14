@@ -1,7 +1,7 @@
 {
   "nirvana": "2.0.0",
   "sync": {
-    "every": 5,
+    "every": 1,
     "sessionCount": 0,
     "lastSync": null
   },
@@ -16,8 +16,8 @@
     "entryBanner": true
   },
   "project": {
-    "type": "{{PROJECT_TYPE}}",
-    "stack": ["{{STACK}}"],
+    "type": "library",
+    "stack": ["markdown-skills", "powershell-installer", "bash-installer"],
     "docsPath": "docs/"
   },
   "graphify": {
@@ -39,17 +39,17 @@
     "architect": {
       "active": true,
       "model": "sonnet",
-      "specialty": "{{BACKEND_SPECIALTY}} + {{FRONTEND_SPECIALTY}}"
+      "specialty": "N/A (framework repo)"
     },
     "devBackend": {
       "active": true,
       "model": "sonnet",
-      "specialty": "{{BACKEND_SPECIALTY}}"
+      "specialty": "N/A (framework repo)"
     },
     "devFrontend": {
       "active": true,
       "model": "sonnet",
-      "specialty": "{{FRONTEND_SPECIALTY}}"
+      "specialty": "N/A (framework repo)"
     },
     "designer": {
       "active": true,
@@ -58,7 +58,7 @@
     "qa": {
       "active": true,
       "model": "sonnet",
-      "specialty": "{{QA_SPECIALTY}}"
+      "specialty": "Manual dogfood validation"
     },
     "reader": {
       "active": true,

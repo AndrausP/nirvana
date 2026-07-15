@@ -88,6 +88,9 @@ foreach ($tpl in $TEMPLATE_FILES) {
     }
 }
 
+# Record installed version (read by update.ps1)
+Set-Content -Path "$TEMPLATES_DIR\.nirvana-version" -Value $NIRVANA_VERSION -Encoding UTF8
+
 Write-Host ""
 Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 Write-Host "  Nirvana installed." -ForegroundColor Green

@@ -70,6 +70,9 @@ for tpl in "${TEMPLATE_FILES[@]}"; do
     fi
 done
 
+# Record installed version (read by update.sh)
+echo "$NIRVANA_VERSION" > "$TEMPLATES_DIR/.nirvana-version"
+
 echo ""
 echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Nirvana installed."

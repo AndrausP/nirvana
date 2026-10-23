@@ -4,10 +4,16 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
+# Hooks run in Claude's current directory, which is not always the project root
+# (subfolder launch, resume after `cd`). Anchor every relative path to the root.
+$projectRoot = $env:CLAUDE_PROJECT_DIR
+if (-not $projectRoot) { $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
+if ($projectRoot) { Set-Location -LiteralPath $projectRoot }
+
 $stateFile = ".claude/state.json"
 if (-not (Test-Path $stateFile)) { exit 0 }
 
-$state = Get-Content $stateFile -Raw | ConvertFrom-Json
+$state = Get-Content $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($state.preferences.entryBanner -eq $false) { exit 0 }
 
 $chat = $state.preferences.chainVisibility

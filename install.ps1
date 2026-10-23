@@ -20,6 +20,8 @@ $TEMPLATE_FILES = @(
     "hooks/nirvana-banner.ps1", "hooks/nirvana-banner.sh"
 )
 $REPO_RAW = "https://raw.githubusercontent.com/AndrausP/nirvana/main"
+# NIRVANA_REPO_RAW overrides the download source (CI serves the checked-out branch locally)
+if ($env:NIRVANA_REPO_RAW) { $REPO_RAW = $env:NIRVANA_REPO_RAW }
 
 # Windows PowerShell's "Set-Content -Encoding UTF8" writes a BOM, which breaks the
 # shebang of .sh files and the frontmatter of .md files. Only .ps1 keeps the BOM:

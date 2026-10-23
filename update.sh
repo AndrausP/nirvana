@@ -19,7 +19,8 @@ TEMPLATE_FILES=(
     "agents/qa.md" "agents/reader.md" "agents/writer.md"
     "hooks/nirvana-banner.ps1" "hooks/nirvana-banner.sh"
 )
-REPO_RAW="https://raw.githubusercontent.com/AndrausP/nirvana/main"
+# NIRVANA_REPO_RAW overrides the download source (CI serves the checked-out branch locally)
+REPO_RAW="${NIRVANA_REPO_RAW:-https://raw.githubusercontent.com/AndrausP/nirvana/main}"
 
 echo ""
 echo "  Nirvana $NIRVANA_VERSION — Updater"

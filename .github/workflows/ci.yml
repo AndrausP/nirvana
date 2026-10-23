@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static checks (JSON, ASCII .ps1, LF .sh, shellcheck, installer lists, version)
+        run: bash tests/lint.sh
+
+  unix:
+    name: Hook + installer (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: SessionStart hook (nirvana-banner.sh)
+        run: bash tests/hook.sh
+      - name: install.sh / update.sh
+        run: bash tests/install.sh
+
+  windows:
+    name: Hook + installer (windows-latest, Windows PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SessionStart hook (nirvana-banner.ps1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\hook.ps1; exit $LASTEXITCODE
+      - name: install.ps1 / update.ps1
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\install.ps1; exit $LASTEXITCODE

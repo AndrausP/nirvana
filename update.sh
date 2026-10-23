@@ -4,7 +4,7 @@
 
 set -e
 
-NIRVANA_VERSION="2.0.0"
+NIRVANA_VERSION="2.0.1"
 SKILLS_DIR="$HOME/.claude/skills"
 TEMPLATES_DIR="$HOME/.claude/nirvana-templates"
 VERSION_FILE="$TEMPLATES_DIR/.nirvana-version"
@@ -37,7 +37,8 @@ fi
 # Current installed version (marker written by install.sh >= 2.0.0)
 installed_version="unknown"
 if [ -f "$VERSION_FILE" ]; then
-    installed_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
+    # Keep only version characters: also drops the BOM that install.ps1 < 2.0.1 wrote
+    installed_version="$(LC_ALL=C tr -cd '0-9A-Za-z.-' < "$VERSION_FILE")"
 fi
 
 if [ "$installed_version" = "$NIRVANA_VERSION" ]; then

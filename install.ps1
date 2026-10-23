@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$NIRVANA_VERSION = "2.0.0"
+$NIRVANA_VERSION = "2.0.1"
 $SKILLS_DIR = "$HOME\.claude\skills"
 $TEMPLATES_DIR = "$HOME\.claude\nirvana-templates"
 $SKILLS = @("light", "bigtask", "smalltask", "reflect", "law", "path", "karma")
@@ -97,7 +97,7 @@ foreach ($tpl in $TEMPLATE_FILES) {
 }
 
 # Record installed version (read by update.ps1)
-Set-Content -Path "$TEMPLATES_DIR\.nirvana-version" -Value $NIRVANA_VERSION -Encoding UTF8
+Write-Utf8File "$TEMPLATES_DIR\.nirvana-version" $NIRVANA_VERSION
 
 Write-Host ""
 Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan

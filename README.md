@@ -349,7 +349,7 @@ Edit `.claude/state.json` directly to change any preference:
 
 ```jsonc
 {
-  "nirvana": "2.0.0",
+  "nirvana": "2.0.1",
   "sync": {
     "every": 5,           // sessions between auto doc syncs
     "sessionCount": 0,    // managed by Nirvana — don't edit

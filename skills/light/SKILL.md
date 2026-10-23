@@ -158,10 +158,15 @@ note it in the final report — the Writer will initialize it on first use inste
 
 ### 5e — Wire the SessionStart banner (terminal design on entry)
 
-Copy the right script for the user's OS into the project:
+Copy the right script for the user's OS into the project — **always overwrite**, also on UPDATE
+re-runs, so the project gets the current version:
 - Windows → `templates/hooks/nirvana-banner.ps1` → `.claude/hooks/nirvana-banner.ps1`
 - macOS/Linux → `templates/hooks/nirvana-banner.sh` → `.claude/hooks/nirvana-banner.sh` (make it
   executable: `chmod +x .claude/hooks/nirvana-banner.sh`)
+
+After copying, confirm the file exists at that path. If the copy failed, do NOT wire the hook —
+report it in the final output instead. A hook pointing at a missing script shows a
+`SessionStart:startup hook error` every time Claude Code opens.
 
 Then wire it into `.claude/settings.json` as a `SessionStart` hook. This file may already exist
 with unrelated hooks (e.g. other plugins) — **merge, never overwrite**:
@@ -170,8 +175,10 @@ with unrelated hooks (e.g. other plugins) — **merge, never overwrite**:
    below.
 2. If it exists, read it, and:
    - If `hooks.SessionStart` doesn't exist yet, add it.
-   - If it exists as an array, APPEND a new entry to it — do not replace or remove existing
-     entries.
+   - If an existing `SessionStart` entry has a hook whose `command` mentions `nirvana-banner`
+     (current or legacy form, e.g. `-File ".claude/hooks/nirvana-banner.ps1"`), REPLACE that
+     hook's `command` with the one below — never add a second banner entry.
+   - Otherwise, APPEND a new entry to the array — do not replace or remove existing entries.
    - Leave every other key in the file (`permissions`, `statusLine`, other hook events, etc.)
      completely untouched.
 
@@ -181,7 +188,7 @@ The hook entry to add (Windows):
   "hooks": [
     {
       "type": "command",
-      "command": "powershell -ExecutionPolicy Bypass -File \".claude/hooks/nirvana-banner.ps1\"",
+      "command": "if (Test-Path \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.ps1\") { powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.ps1\" }",
       "shell": "powershell",
       "timeout": 10
     }
@@ -195,16 +202,22 @@ The hook entry to add (macOS/Linux):
   "hooks": [
     {
       "type": "command",
-      "command": "bash .claude/hooks/nirvana-banner.sh",
+      "command": "[ ! -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.sh\" ] || bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.sh\"",
       "timeout": 10
     }
   ]
 }
 ```
 
-Pick the OS-appropriate command based on the platform this session is running on. The script
-itself reads `.claude/state.json` and prints nothing if `preferences.entryBanner` is `false` —
-so wiring the hook is safe even for users who turn the banner off later.
+Pick the OS-appropriate command based on the platform this session is running on. Why the
+command looks like this:
+- `CLAUDE_PROJECT_DIR` — hooks run in Claude's current directory, not necessarily the project
+  root; a bare relative path breaks when Claude is opened from a subfolder.
+- Existence guard — if the script is missing (deleted, not copied, or a teammate without
+  Nirvana), the hook is a silent no-op instead of an error on every session start.
+
+The script itself reads `.claude/state.json` and prints nothing if `preferences.entryBanner` is
+`false` — so wiring the hook is safe even for users who turn the banner off later.
 
 ### 5f — Update ~/.claude/CLAUDE.md
 

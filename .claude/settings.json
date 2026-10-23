@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File \".claude/hooks/nirvana-banner.ps1\"",
+            "command": "if (Test-Path \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.ps1\") { powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/nirvana-banner.ps1\" }",
             "shell": "powershell",
             "timeout": 10
           }

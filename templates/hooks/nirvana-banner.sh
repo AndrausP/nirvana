@@ -3,6 +3,11 @@
 # Wired by /light into .claude/settings.json as a SessionStart hook.
 # Prints nothing (exit 0) if entryBanner is off or state.json is missing.
 
+# Hooks run in Claude's current directory, which is not always the project root
+# (subfolder launch, resume after `cd`). Anchor every relative path to the root.
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+cd "$PROJECT_ROOT" 2>/dev/null || exit 0
+
 STATE_FILE=".claude/state.json"
 [ -f "$STATE_FILE" ] || exit 0
 

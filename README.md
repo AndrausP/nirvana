@@ -1,5 +1,7 @@
 # Nirvana
 
+[![CI](https://github.com/AndrausP/nirvana/actions/workflows/ci.yml/badge.svg)](https://github.com/AndrausP/nirvana/actions/workflows/ci.yml)
+
 > Multi-agent Claude Code workspace system. Routes tasks through a 9-role chain — Product Owner
 > to Writer — with shared memory indexed by [graphify](https://github.com/Graphify-Labs/graphify),
 > sprint/task tracking, and token-saving compaction — for **any project, any tech stack**.
@@ -419,6 +421,8 @@ nirvana/
 ├── install.sh                ← macOS/Linux installer
 ├── update.ps1               ← Windows updater
 ├── update.sh                 ← macOS/Linux updater
+├── .github/workflows/ci.yml  ← runs tests/ on Ubuntu, macOS and Windows
+├── tests/                    ← lint.sh, hook.sh/.ps1, install.sh/.ps1, serve.py
 ├── skills/                   ← skill source files
 │   ├── light/SKILL.md
 │   ├── bigtask/SKILL.md
@@ -458,6 +462,27 @@ nirvana/
 `install.ps1`/`install.sh` mirror the whole `templates/` tree into
 `~/.claude/nirvana-templates/` — that's what `/light` actually reads from at runtime (see the
 note at the top of `skills/light/SKILL.md`).
+
+### Tests
+
+CI runs on every pull request and on `main` (Ubuntu, macOS, and Windows PowerShell 5.1). To run
+the same checks locally:
+
+```bash
+bash tests/lint.sh      # JSON, ASCII-only .ps1, LF .sh, shellcheck, installer lists, version
+bash tests/hook.sh      # SessionStart hook: banner, session counter, compaction notice
+bash tests/install.sh   # install.sh + update.sh into a throwaway HOME
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\hook.ps1
+powershell -ExecutionPolicy Bypass -File tests\install.ps1
+```
+
+The install tests never touch your real `~/.claude`: they serve this checkout over a local HTTP
+server (`tests/serve.py`, same `charset=utf-8` as GitHub raw) and point the installers at it with
+`NIRVANA_REPO_RAW`. When adding a template or skill, add it to the lists in all four installers —
+`tests/lint.sh` fails otherwise.
 
 ---
 

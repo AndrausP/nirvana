@@ -19,7 +19,7 @@ rodando aqui em modo dogfood (validação real do `/light`, `/bigtask`, `/smallt
 | 4 | Dev Backend | sonnet | implementa backend | N/A (repo é o próprio framework, sem app back/front) |
 | 5 | Dev Frontend | sonnet | implementa frontend/UI | N/A (repo é o próprio framework, sem app back/front) |
 | 6 | Designer | sonnet | UX/UI, fluxos, diretrizes visuais | design |
-| 7 | QA | sonnet | testa, valida critério de aceite | Validação manual dogfood (sem test framework) |
+| 7 | QA | sonnet | testa, valida critério de aceite | `tests/` (lint, hook, install/update) + CI GitHub Actions + dogfood |
 | 8 | Reader | haiku | só lê o projeto, repassa cru pro Writer | leitura |
 | 9 | Writer | sonnet | única escrita em memória; indexa no graphify | documentação |
 

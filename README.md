@@ -55,6 +55,31 @@ You only do this **once per machine**.
 
 ---
 
+## Update
+
+Already installed and just want the latest version?
+
+**Windows — run in PowerShell:**
+```powershell
+iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/update.ps1 | iex
+```
+
+**macOS / Linux — run in terminal:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/update.sh | bash
+```
+
+The updater:
+1. Checks Nirvana is actually installed (refuses and points to the installer if not)
+2. Shows the installed version vs. the latest (`~/.claude/nirvana-templates/.nirvana-version`)
+3. Re-downloads all 7 skills and every template, overwriting the global copies
+4. Records the new version
+
+Projects already configured keep working as-is — to refresh a project's Nirvana block
+(`CLAUDE.md`, hooks), open it in Claude Code and re-run `/light` after updating.
+
+---
+
 ## Setup a project
 
 After installing, open Claude Code inside **any project** and run:
@@ -381,6 +406,8 @@ nirvana/
 ├── README.md
 ├── install.ps1              ← Windows installer
 ├── install.sh                ← macOS/Linux installer
+├── update.ps1               ← Windows updater
+├── update.sh                 ← macOS/Linux updater
 ├── skills/                   ← skill source files
 │   ├── light/SKILL.md
 │   ├── bigtask/SKILL.md

@@ -15,8 +15,10 @@ if (-not $chat) { $chat = "hidden" }
 
 $sprintLabel = "nenhum ativo"
 if (Test-Path "docs/sprints") {
+    # Latest sprint = highest number (name order would put sprint-10 before sprint-2)
     $sprintFile = Get-ChildItem -Path "docs/sprints" -Filter "sprint-*.md" |
-        Where-Object { $_.Name -ne "sprint-template.md" } |
+        Where-Object { $_.BaseName -match '^sprint-\d+$' } |
+        Sort-Object { [int]($_.BaseName -replace '^sprint-', '') } -Descending |
         Select-Object -First 1
     if ($sprintFile) { $sprintLabel = $sprintFile.BaseName }
 }

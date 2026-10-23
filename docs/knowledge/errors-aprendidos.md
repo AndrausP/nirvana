@@ -35,3 +35,18 @@ assume que o arquivo existe — sempre `CLAUDE_PROJECT_DIR` + guarda de existên
 Observação: na mesma tela aparece "Hook output looks like a JSON object but is not valid JSON" —
 esse erro NÃO é do Nirvana. Vem do hook de `SessionStart` do plugin claude-mem (start do worker),
 que imprime dois objetos JSON seguidos no stdout.
+
+## [2026-10-23] Sync automático e auto-compact documentados mas nunca ligados
+
+**Task:** n/a (fix direto, branch `feat/session-sync-compact`)
+**Causa raiz:** o protocolo dizia "quando `sync.sessionCount >= sync.every`, broker roda
+`/reflect`" e "compacta em `compact.threshold`%", mas nada incrementava `sessionCount` (só o
+`/reflect` zerava) e nada passava o threshold ao Claude Code. As duas promessas viviam só no texto.
+**Sintoma:** `sessionCount` sempre `0` em todos os projetos; `/reflect` nunca disparava sozinho;
+o auto-compact seguia o padrão do Claude Code, ignorando a resposta do `/light`.
+**Correção:** o hook `SessionStart` conta conversas novas (`startup`/`clear`) em
+`.claude/state.local.json` e avisa quando o sync vence; depois de uma compactação (source
+`compact`) avisa o Writer. O `/light` grava `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` (ou
+`DISABLE_AUTO_COMPACT`) no `env` do `.claude/settings.json`.
+**Como evitar de novo:** todo comportamento "automático" descrito no protocolo precisa apontar o
+mecanismo que o executa (hook, env, skill). Se não há mecanismo, é intenção, não feature.

@@ -1,8 +1,7 @@
 {
-  "nirvana": "2.0.1",
+  "nirvana": "2.1.0",
   "sync": {
     "every": 1,
-    "sessionCount": 0,
     "lastSync": null
   },
   "compact": {

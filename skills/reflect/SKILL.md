@@ -57,8 +57,18 @@ For each doc file:
 
 Update `.claude/state.json`:
 - Set `sync.lastSync` to today's date (YYYY-MM-DD)
-- Reset `sync.sessionCount` to 0
 - Set `graphify.lastIndexed` to today's date if `/graphify docs/knowledge --update` ran
+
+Reset the session counter in `.claude/state.local.json` (create the file if missing):
+```json
+{
+  "sync": {
+    "sessionCount": 0
+  }
+}
+```
+The SessionStart hook increments it on each new session and asks for `/reflect` again once it
+reaches `sync.every`. Never write `sessionCount` into `state.json` — that file is tracked in git.
 
 ## Step 5 — Report
 

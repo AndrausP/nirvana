@@ -160,18 +160,25 @@ Sempre ativo (full). Só desativa se o usuário disser explicitamente "stop cave
 
 ## Compact & Sync
 
-- Threshold de auto-compact e frequência de sync em `.claude/state.json`.
+- Frequência de sync (`sync.every`) e threshold de auto-compact (`compact.*`) em
+  `.claude/state.json`. O threshold vale via `env` do `.claude/settings.json`
+  (`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` ou `DISABLE_AUTO_COMPACT`), gravado pelo `/light`.
+- Contador de sessões em `.claude/state.local.json` (fora do git), incrementado pelo hook
+  `SessionStart` a cada conversa nova.
 - No fim da sessão: Writer garante que tudo que precisa ser lembrado já foi indexado no graphify.
-- Quando `sync.sessionCount >= sync.every`: broker roda `/reflect` — sintetiza `docs/` a partir
-  do graphify.
-- No compact: Writer indexa pendências no graphify primeiro, depois compacta.
+- Quando o contexto da sessão traz `[nirvana] Sync automatico pendente`: broker roda `/reflect`
+  antes da primeira tarefa — sintetiza `docs/` a partir do graphify e zera o contador.
+- Quando traz `[nirvana] Contexto compactado`: Writer registra em `docs/knowledge/` o que a sessão
+  decidiu ou aprendeu e ainda não está documentado (o resumo da compactação tem o histórico) e
+  reindexa o graphify, antes de seguir com a tarefa.
 
 ## Terminal ao entrar
 
 `/light` instala um hook `SessionStart` (`.claude/hooks/nirvana-banner.*`, wired em
 `.claude/settings.json`) que mostra, toda vez que o Claude Code abre neste projeto: banner
-Nirvana, sprint atual, contagem de tasks por status, e se o chat da cadeia está ligado. Controlado
-por `preferences.entryBanner` em `.claude/state.json` (`true`/`false`).
+Nirvana, sprint atual, contagem de tasks por status, sessões desde o último `/reflect`, e se o
+chat da cadeia está ligado. Controlado por `preferences.entryBanner` em `.claude/state.json`
+(`true`/`false`) — desligado, o hook ainda conta sessões e imprime os avisos `[nirvana]`.
 
 ## Commit Rules
 

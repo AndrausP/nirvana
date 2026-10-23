@@ -96,9 +96,11 @@ Nirvana will:
 4. Ask 2 questions: sync frequency and compact threshold
 5. Create `docs/` (architecture, modules, decisions, sprints/, tasks/, knowledge/) and
    initialize graphify over `docs/knowledge/`
-6. Wire a banner into `.claude/settings.json` (`SessionStart` hook) that shows sprint/task
-   status every time you open the project — merged in, any existing hooks stay untouched
-7. Show a tutorial
+6. Wire a `SessionStart` hook into `.claude/settings.json` that shows sprint/task status every
+   time you open the project, counts sessions for the automatic `/reflect`, and reminds the
+   Writer after a compaction — merged in, any existing hooks stay untouched
+7. Apply your compact threshold through the `env` block of `.claude/settings.json`
+8. Show a tutorial
 
 **That's it. Nirvana is active.**
 
@@ -139,7 +141,8 @@ For clear, unambiguous tasks. No grilling. Still runs the chain, just without th
 
 ### `/reflect`
 Force an immediate doc sync from the shared graphify-indexed knowledge base. Useful before a
-sprint review or when docs are stale.
+sprint review or when docs are stale. It also runs automatically: every `sync.every` sessions
+the entry banner asks Claude to run it, and running it resets the session counter.
 
 ```
 /reflect
@@ -272,8 +275,9 @@ Make it the default for every run: set `preferences.chainVisibility: "visible"` 
 `.claude/state.json` (default is `"hidden"`).
 
 **Terminal banner on entry (on by default).** Every time you open Claude Code in a
-Nirvana-configured project, a banner shows the current sprint, task counts, and whether chat
-visibility is on. Turn it off: `preferences.entryBanner: false` in `.claude/state.json`.
+Nirvana-configured project, a banner shows the current sprint, task counts, sessions since the
+last `/reflect`, and whether chat visibility is on. Turn it off: `preferences.entryBanner: false`
+in `.claude/state.json` — the hook still counts sessions and prints its `[nirvana]` reminders.
 
 ---
 
@@ -286,11 +290,18 @@ Nirvana saves tokens two ways:
 - Change level: `/caveman lite` | `/caveman full` | `/caveman ultra`
 
 **2. Smart compaction** — when context exceeds your threshold:
-1. The Writer indexes anything pending into graphify first (nothing lost)
-2. `/compact` runs — context is summarized
-3. Next message starts fresh, memory still queryable via graphify
+1. Claude Code auto-compacts at `compact.threshold`% — `/light` applies it as
+   `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` in `.claude/settings.json` (or `DISABLE_AUTO_COMPACT` when
+   you pick "Disabled"). The override can only make compaction happen earlier than Claude Code's
+   default, never later.
+2. Right after compacting, the `SessionStart` hook tells the Writer to record in
+   `docs/knowledge/` whatever the session decided or learned and is still undocumented (the
+   compaction summary still has it), then reindex graphify. Claude Code has no hook that lets
+   the model act *before* compacting, so this happens immediately after.
+3. Memory stays queryable via graphify.
 
-Both are configurable in `.claude/state.json`.
+Both are configured with `/light`. After editing `compact.*` in `.claude/state.json` by hand,
+re-run `/light` so the `env` in `.claude/settings.json` follows.
 
 ---
 
@@ -314,7 +325,8 @@ your-project/
         └── business-rules.md
 .claude/
 ├── state.json
-├── settings.json                 ← SessionStart hook merged in here (existing hooks preserved)
+├── state.local.json              ← session counter, per machine (added to .gitignore)
+├── settings.json                 ← SessionStart hook + compact env merged in (existing keys preserved)
 └── hooks/
     └── nirvana-banner.ps1        ← or .sh on macOS/Linux
 ```
@@ -349,15 +361,14 @@ Edit `.claude/state.json` directly to change any preference:
 
 ```jsonc
 {
-  "nirvana": "2.0.1",
+  "nirvana": "2.1.0",
   "sync": {
     "every": 5,           // sessions between auto doc syncs
-    "sessionCount": 0,    // managed by Nirvana — don't edit
     "lastSync": null      // managed by Nirvana — don't edit
   },
   "compact": {
-    "auto": true,         // enable auto-compact
-    "threshold": 70       // compact when context > 70%
+    "auto": true,         // enable auto-compact (false = DISABLE_AUTO_COMPACT)
+    "threshold": 70       // compact when context > 70% — re-run /light after changing
   },
   "preferences": {
     "caveman": "full",         // lite | full | ultra | off

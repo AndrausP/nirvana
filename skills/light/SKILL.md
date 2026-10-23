@@ -19,7 +19,7 @@ If it EXISTS:
 - Tell the user: "Nirvana already configured for this project."
 - Use AskUserQuestion: "What would you like to do?" | options: ["Update configuration (preserves session history)", "Cancel"]
 - If Cancel: stop completely.
-- If Update: continue to Step 2, but in Step 5 MERGE state.json (preserve `sync.sessionCount` and `sync.lastSync` values) and in Step 5a only regenerate the content BETWEEN the Nirvana markers in CLAUDE.md (see Step 5a) — never touch anything outside them.
+- If Update: continue to Step 2, but in Step 5 MERGE state.json (preserve `sync.lastSync`; a legacy `sync.sessionCount` moves to `.claude/state.local.json`, see Step 5b) and in Step 5a only regenerate the content BETWEEN the Nirvana markers in CLAUDE.md (see Step 5a) — never touch anything outside them.
 
 If NOT exists: continue to Step 2.
 
@@ -62,10 +62,11 @@ Display this block:
   4. Create docs/ skeleton: architecture.md, modules.md, decisions.md,
      sprints/, tasks/, knowledge/ (errors-aprendidos.md, patterns.md,
      business-rules.md — this is what graphify indexes)
-  5. Wire a SessionStart banner (shows sprint/tasks/chat status every time
-     you open this project) — merged into .claude/settings.json, existing
-     hooks untouched
-  6. Update ~/.claude/CLAUDE.md with the generic Nirvana 9-agent table
+  5. Wire a SessionStart hook (banner with sprint/tasks/chat status, session
+     counter for the automatic /reflect, Writer reminder after a compaction)
+     — merged into .claude/settings.json, existing hooks untouched
+  6. Apply the auto-compact threshold (env in .claude/settings.json)
+  7. Update ~/.claude/CLAUDE.md with the generic Nirvana 9-agent table
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -83,7 +84,7 @@ Question 1 (AskUserQuestion):
 Question 2 (AskUserQuestion):
 - "Auto-compact when context exceeds:"
 - Options: ["50%", "70% (recommended)", "80%", "Disabled"]
-- Map to value: 50, 70, 80, 0 (0 = disabled, set auto: false)
+- Map to value: 50, 70, 80, 0 (0 = disabled, set auto: false) — applied in Step 5f
 
 ## STEP 5 — Execute setup (all steps, no confirmation needed)
 
@@ -137,7 +138,22 @@ Copy `templates/state.json`, substituting `SYNC_EVERY`, `COMPACT_AUTO`, `COMPACT
 Step 4 answers, and project info from Step 2. Keep the `graphify`, `agents`, and `tasks` blocks
 from the template as-is (only specialty placeholders get filled).
 
-On UPDATE re-runs: preserve `sync.sessionCount` and `sync.lastSync` from the existing file.
+On UPDATE re-runs: preserve `sync.lastSync` from the existing file. If the existing file still
+has `sync.sessionCount` (Nirvana < 2.1), carry its value into `.claude/state.local.json` below
+and drop the key from `state.json`.
+
+Then create `.claude/state.local.json` if it doesn't exist:
+```json
+{
+  "sync": {
+    "sessionCount": 0
+  }
+}
+```
+It holds the session counter that the SessionStart hook (Step 5e) increments on every new
+session. It is per-machine state that changes every session, so it must stay out of git: if the
+project is a git repository, add `.claude/state.local.json` to `.gitignore` (create the file if
+needed; skip if the line is already there).
 
 ### 5c — Create docs/ skeleton (skip files that already exist)
 
@@ -156,7 +172,17 @@ will be near-empty until the Writer starts documenting, but the graph structure 
 `graphify-out/` are ready). If the `graphify` command is unavailable, skip this silently and
 note it in the final report — the Writer will initialize it on first use instead.
 
-### 5e — Wire the SessionStart banner (terminal design on entry)
+### 5e — Wire the SessionStart hook (banner, session counter, post-compact reminder)
+
+The script is more than a banner. On every session start it:
+- increments `sync.sessionCount` in `.claude/state.local.json` (only for a new conversation:
+  source `startup` or `clear`, never `resume` or `compact`);
+- prints the banner, with a `Sync: N/M` line;
+- when the counter reaches `sync.every`, tells Claude to run `/reflect` before the first task;
+- after a compaction (source `compact`), skips the banner and tells the Writer to persist in
+  `docs/knowledge/` whatever the session decided or learned and is still undocumented.
+
+Its stdout reaches Claude as session context, which is how those instructions get acted on.
 
 Copy the right script for the user's OS into the project — **always overwrite**, also on UPDATE
 re-runs, so the project gets the current version:
@@ -216,10 +242,29 @@ command looks like this:
 - Existence guard — if the script is missing (deleted, not copied, or a teammate without
   Nirvana), the hook is a silent no-op instead of an error on every session start.
 
-The script itself reads `.claude/state.json` and prints nothing if `preferences.entryBanner` is
-`false` — so wiring the hook is safe even for users who turn the banner off later.
+With `preferences.entryBanner: false` the script skips the banner but still counts sessions and
+prints the sync and compaction instructions — so wiring the hook is safe even for users who turn
+the banner off later.
 
-### 5f — Update ~/.claude/CLAUDE.md
+### 5f — Apply the auto-compact threshold
+
+The compact answer from Step 4 only takes effect through Claude Code's own environment variables.
+Set them in the `env` block of `.claude/settings.json` — **merge**: keep every other `env` key
+and the rest of the file untouched. Re-apply on UPDATE re-runs too.
+
+| Step 4 answer | Set in `env` | Remove from `env` |
+|---|---|---|
+| 50% / 70% / 80% | `"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "<value>"` (string) | `DISABLE_AUTO_COMPACT` |
+| Disabled | `"DISABLE_AUTO_COMPACT": "1"` | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` |
+
+Notes for the final report:
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` can only make compaction happen **earlier** than Claude
+  Code's default; a value above the default is ignored.
+- `env` values in a shared `.claude/settings.json` apply once the user trusts the folder.
+- Claude Code has no hook that lets the model act before compacting (`PreCompact` can only
+  block it), so the Writer persists pending knowledge right after, prompted by the Step 5e hook.
+
+### 5g — Update ~/.claude/CLAUDE.md
 
 Read `~/.claude/CLAUDE.md`. Find the section that defines agents (look for "Nirvana Agents",
 "O Time", or a table with agent roles).
@@ -286,6 +331,10 @@ Display exactly this in the terminal:
       default with preferences.chainVisibility: "visible" in state.json.
     - Every time you open this project, a Nirvana banner shows sprint/task
       status. Turn it off with preferences.entryBanner: false in state.json.
+    - Every [sync.every] sessions the banner asks Claude to run /reflect
+      (docs sync). The counter lives in .claude/state.local.json (gitignored).
+    - Auto-compact runs at [compact.threshold]% of context; right after it,
+      the Writer is reminded to persist anything still undocumented.
 
   Other commands:
     /karma   — status (agents, docs, sessions, last sync, graphify)

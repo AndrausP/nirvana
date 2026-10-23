@@ -1,6 +1,8 @@
-# Nirvana — SessionStart banner (Windows/PowerShell)
+# Nirvana - SessionStart banner (Windows/PowerShell)
 # Wired by /light into .claude/settings.json as a SessionStart hook.
 # Prints nothing (exit 0) if entryBanner is off or state.json is missing.
+# Keep this file ASCII-only: Windows PowerShell 5.1 reads a BOM-less .ps1 as ANSI, so a
+# character like an em dash breaks parsing when the script is run with -File.
 
 $ErrorActionPreference = "SilentlyContinue"
 

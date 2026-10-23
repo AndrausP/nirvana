@@ -9,6 +9,8 @@ You are executing /karma — show full Nirvana status.
 
 Read:
 - `.claude/state.json`
+- `.claude/state.local.json` — `sync.sessionCount` (missing file = 0)
+- `.claude/settings.json` — `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` / `env.DISABLE_AUTO_COMPACT`
 - `docs/architecture.md`, `docs/modules.md`, `docs/decisions.md` (check exists + last synced)
 - `docs/knowledge/business-rules.md` (count rules)
 - `docs/knowledge/errors-aprendidos.md`, `docs/knowledge/patterns.md` (count entries)
@@ -46,8 +48,8 @@ Read:
     Tasks:        [N] planned, [N] in-progress, [N] done
 
   Sessões
-    Since last sync:  [sync.sessionCount] / [sync.every]
-    Next auto-sync:   in [sync.every - sync.sessionCount] sessions
+    Since last sync:  [sync.sessionCount from state.local.json] / [sync.every]
+    Next auto-sync:   in [sync.every - sync.sessionCount] sessions ("pending — run /reflect" if <= 0)
     Last sync:        [sync.lastSync or "never"]
 
   Docs
@@ -58,6 +60,8 @@ Read:
   Compact
     Auto:        [on/off]
     Threshold:   [compact.threshold]%
+    Applied:     [settings.json env: "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=N" | "DISABLE_AUTO_COMPACT=1" |
+                  "not applied — re-run /light"]
 
   Terminal
     Chat da cadeia:  [preferences.chainVisibility] (hidden = só resultado final, visible = handoff ao vivo)

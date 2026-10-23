@@ -7,9 +7,10 @@ You are executing /path — show the current Nirvana config.
 
 ## Read config
 
-Read `.claude/state.json`.
+Read `.claude/state.json`, plus `.claude/state.local.json` for the session counter (missing
+file = 0) and the `env` block of `.claude/settings.json` for the applied compact setting.
 
-If not found: tell user "Nirvana not configured for this project. Run /light to set up."
+If `state.json` is not found: tell user "Nirvana not configured for this project. Run /light to set up."
 
 ## Display formatted
 
@@ -43,12 +44,14 @@ Show the config in a readable table format:
 
   Sync
     Every:        [sync.every] sessions
-    Current:      [sync.sessionCount] sessions since last sync
+    Current:      [sync.sessionCount from state.local.json] sessions since last sync
     Last sync:    [sync.lastSync or "never — run /reflect"]
 
   Compact
     Auto:         [compact.auto]
     Threshold:    [compact.threshold]%
+    Applied:      [settings.json env value, or "not applied — re-run /light"]
+    (Claude Code reads the env from .claude/settings.json: after editing compact.*, re-run /light)
 
   Tasks
     /bigtask → grill-me: [tasks.bigtaskAutoGrill]

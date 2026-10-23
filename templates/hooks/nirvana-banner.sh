@@ -44,8 +44,12 @@ if [ "$SOURCE" != "compact" ] && [ "$ENTRY_BANNER" != "false" ]; then
   SPRINT_LABEL="nenhum ativo"
   if [ -d docs/sprints ]; then
     # Latest sprint = highest number (name order would put sprint-10 before sprint-2)
-    SPRINT_FILE=$(ls docs/sprints/sprint-*.md 2>/dev/null | grep -E '/sprint-[0-9]+\.md$' | sort -t- -k2 -n | tail -1)
-    [ -n "$SPRINT_FILE" ] && SPRINT_LABEL=$(basename "$SPRINT_FILE" .md)
+    LATEST=-1
+    for f in docs/sprints/sprint-*.md; do
+      n="${f##*/sprint-}"; n="${n%.md}"
+      case "$n" in ''|*[!0-9]*) continue ;; esac  # skips sprint-template.md and an unmatched glob
+      if [ "$n" -gt "$LATEST" ]; then LATEST=$n; SPRINT_LABEL="sprint-$n"; fi
+    done
   fi
 
   PLANNED=0; INPROGRESS=0; DONE=0

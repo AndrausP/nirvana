@@ -1,5 +1,7 @@
-# Nirvana Installer — Windows (PowerShell)
+# Nirvana Installer - Windows (PowerShell)
 # Run: iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/install.ps1 | iex
+# Keep this file ASCII-only: Windows PowerShell 5.1 reads a BOM-less .ps1 as ANSI, so a
+# character like an em dash breaks parsing when the script is run with -File.
 
 $ErrorActionPreference = "Stop"
 
@@ -28,8 +30,8 @@ function Write-Utf8File([string]$Path, [string]$Text) {
 }
 
 Write-Host ""
-Write-Host "  Nirvana $NIRVANA_VERSION — Installer" -ForegroundColor Cyan
-Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+Write-Host "  Nirvana $NIRVANA_VERSION - Installer" -ForegroundColor Cyan
+Write-Host "  ===================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check Claude Code is installed
@@ -71,7 +73,7 @@ foreach ($skill in $SKILLS) {
 
 Write-Host ""
 
-# Install templates (used by /light — must live outside the repo since /light
+# Install templates (used by /light - must live outside the repo since /light
 # runs inside arbitrary target projects, not inside the Nirvana repo)
 if (-not (Test-Path $TEMPLATES_DIR)) {
     New-Item -ItemType Directory -Force -Path $TEMPLATES_DIR | Out-Null
@@ -100,7 +102,7 @@ foreach ($tpl in $TEMPLATE_FILES) {
 Set-Content -Path "$TEMPLATES_DIR\.nirvana-version" -Value $NIRVANA_VERSION -Encoding UTF8
 
 Write-Host ""
-Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+Write-Host "  ===================================" -ForegroundColor Cyan
 Write-Host "  Nirvana installed." -ForegroundColor Green
 Write-Host ""
 Write-Host "  Next step:" -ForegroundColor White

@@ -19,7 +19,8 @@ CHAT=$(grep -o '"chainVisibility"[[:space:]]*:[[:space:]]*"[a-z]*"' "$STATE_FILE
 
 SPRINT_LABEL="nenhum ativo"
 if [ -d docs/sprints ]; then
-  SPRINT_FILE=$(ls docs/sprints/sprint-*.md 2>/dev/null | grep -v 'sprint-template.md' | head -1)
+  # Latest sprint = highest number (name order would put sprint-10 before sprint-2)
+  SPRINT_FILE=$(ls docs/sprints/sprint-*.md 2>/dev/null | grep -E '/sprint-[0-9]+\.md$' | sort -t- -k2 -n | tail -1)
   [ -n "$SPRINT_FILE" ] && SPRINT_LABEL=$(basename "$SPRINT_FILE" .md)
 fi
 

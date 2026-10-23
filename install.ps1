@@ -19,6 +19,14 @@ $TEMPLATE_FILES = @(
 )
 $REPO_RAW = "https://raw.githubusercontent.com/AndrausP/nirvana/main"
 
+# Windows PowerShell's "Set-Content -Encoding UTF8" writes a BOM, which breaks the
+# shebang of .sh files and the frontmatter of .md files. Only .ps1 keeps the BOM:
+# Windows PowerShell needs it to read non-ASCII characters as UTF-8.
+function Write-Utf8File([string]$Path, [string]$Text) {
+    $withBom = [IO.Path]::GetExtension($Path) -eq ".ps1"
+    [IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding $withBom))
+}
+
 Write-Host ""
 Write-Host "  Nirvana $NIRVANA_VERSION — Installer" -ForegroundColor Cyan
 Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -53,7 +61,7 @@ foreach ($skill in $SKILLS) {
 
     try {
         $content = Invoke-WebRequest -Uri "$REPO_RAW/skills/$skill/SKILL.md" -UseBasicParsing
-        Set-Content -Path $skillFile -Value $content.Content -Encoding UTF8
+        Write-Utf8File $skillFile $content.Content
         Write-Host "  /$skill installed" -ForegroundColor Green
     } catch {
         Write-Host "  /$skill FAILED: $_" -ForegroundColor Red
@@ -80,7 +88,7 @@ foreach ($tpl in $TEMPLATE_FILES) {
 
     try {
         $content = Invoke-WebRequest -Uri "$REPO_RAW/templates/$tpl" -UseBasicParsing
-        Set-Content -Path $tplPath -Value $content.Content -Encoding UTF8
+        Write-Utf8File $tplPath $content.Content
         Write-Host "  $tpl installed" -ForegroundColor Green
     } catch {
         Write-Host "  $tpl FAILED: $_" -ForegroundColor Red

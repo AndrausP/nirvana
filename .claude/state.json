@@ -57,7 +57,7 @@
     "qa": {
       "active": true,
       "model": "sonnet",
-      "specialty": "Manual dogfood validation"
+      "specialty": "tests/ (lint, hook, install/update) + GitHub Actions CI + dogfood"
     },
     "reader": {
       "active": true,

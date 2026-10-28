@@ -4,7 +4,7 @@
 
 set -e
 
-NIRVANA_VERSION="2.1.0"
+NIRVANA_VERSION="2.2.0"
 SKILLS_DIR="$HOME/.claude/skills"
 TEMPLATES_DIR="$HOME/.claude/nirvana-templates"
 SKILLS=("light" "bigtask" "smalltask" "reflect" "law" "path" "karma")

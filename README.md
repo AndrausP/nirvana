@@ -44,7 +44,15 @@ files in your repo. No server, no SDK, no new tool to learn.
 
 ## Quickstart
 
-**1. Install once per machine**
+**1. Install once per machine** — as a Claude Code plugin, inside Claude Code:
+
+```
+/plugin marketplace add AndrausP/nirvana
+/plugin install nirvana@nirvana
+```
+
+<details>
+<summary>Or with the install script (no plugin)</summary>
 
 ```powershell
 # Windows (PowerShell)
@@ -56,17 +64,20 @@ iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/install.ps1 | 
 curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/install.sh | bash
 ```
 
+The script installs the commands without the `nirvana:` prefix (`/light`, `/bigtask`, …).
+</details>
+
 **2. Set up a project** — open Claude Code in it and run:
 
 ```
-/light
+/nirvana:light
 ```
 
 **3. Give the team work:**
 
 ```
-/bigtask add password reset by email
-/smalltask fix null check in UserService
+/nirvana:bigtask add password reset by email
+/nirvana:smalltask fix null check in UserService
 ```
 
 From then on, every time you open the project a banner shows where things stand:
@@ -128,7 +139,8 @@ to any task to watch the hand-offs live. Full walkthrough: [How it works](docs/g
 | `/karma` | Status: agents, sessions, docs, graphify, open sprints and tasks. |
 | `/path` | Show the project's Nirvana settings. |
 
-Examples and flags: [Commands](docs/guide/commands.md).
+Installed as a plugin, each command carries the plugin prefix: `/nirvana:light`,
+`/nirvana:bigtask`, and so on. Examples and flags: [Commands](docs/guide/commands.md).
 
 ## Nirvana vs. plain Claude Code
 
@@ -152,8 +164,9 @@ use `/smalltask`, or plain Claude Code.
   the knowledge graph. Without it the Writer keeps the same markdown files, just without a graph
   index.
 
-Update with `update.ps1` / `update.sh`, the same way you installed. Details, uninstalling and the
-full `state.json` reference: [Configuration](docs/guide/configuration.md).
+To update, run `/plugin marketplace update nirvana` (plugin) or re-run `update.ps1` /
+`update.sh` (script). Details, uninstalling and the full `state.json` reference:
+[Configuration](docs/guide/configuration.md).
 
 ## Documentation
 

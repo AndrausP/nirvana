@@ -3,15 +3,22 @@
 All notable changes to Nirvana. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.2.0] - Unreleased
 
 ### Added
+- Claude Code plugin: install with `/plugin marketplace add AndrausP/nirvana` and
+  `/plugin install nirvana@nirvana`. The repo root is both the marketplace and the plugin;
+  commands become `/nirvana:light`, `/nirvana:bigtask`, and so on. The install scripts keep
+  working.
+- `tests/plugin.sh` and a CI job that validate the plugin and install it into a throwaway config.
 - MIT `LICENSE` file (the README already declared MIT).
 - `CONTRIBUTING.md`, issue forms and a pull request template.
 - User guide in `docs/guide/`: how it works, commands, configuration (including manual uninstall).
 
 ### Changed
 - README rewritten as a short landing page; the detailed reference moved to `docs/guide/`.
+- `/light` reads templates from the plugin folder when installed as a plugin, and from
+  `~/.claude/nirvana-templates/` otherwise.
 
 ## [2.1.0] - 2026-10-23
 
@@ -58,5 +65,3 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Added
 - First release: `/light`, `/bigtask`, `/smalltask`, `/reflect`, `/law`, `/path`, `/karma`,
   installers for Windows and macOS/Linux, and replies in the user's language.
-
-[Unreleased]: https://github.com/AndrausP/nirvana/commits/main

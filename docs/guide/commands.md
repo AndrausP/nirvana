@@ -2,6 +2,10 @@
 
 [← Back to README](../../README.md) · [How it works](how-it-works.md) · [Configuration](configuration.md)
 
+Installed as a Claude Code plugin, every command carries the plugin prefix: `/nirvana:light`,
+`/nirvana:bigtask`, `/nirvana:law`, and so on. Installed with the script, they don't: `/light`,
+`/bigtask`, `/law`. The examples below use the short form.
+
 ---
 
 ## `/light`

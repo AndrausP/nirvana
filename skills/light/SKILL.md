@@ -5,11 +5,17 @@ description: Nirvana initializer — merges the broker protocol and 9 role-based
 
 You are executing the Nirvana /light setup. Follow every step exactly. Do not skip steps. Do not ask permission between steps unless instructed.
 
-**Template source:** every `templates/X` reference below means `~/.claude/nirvana-templates/X`
-(installed globally by `install.ps1`/`install.sh` — NOT a path relative to the current project,
-and NOT the Nirvana repo's own `templates/` folder, which isn't present in a normal install). If
-`~/.claude/nirvana-templates/` doesn't exist, tell the user their Nirvana install is outdated
-(pre-2.0) and to re-run the installer, then stop.
+**Template source:** every `templates/X` reference below means `<TEMPLATES>/X` — NOT a path
+relative to the current project. Resolve `<TEMPLATES>` once, before Step 1, taking the first
+that exists:
+1. `${CLAUDE_PLUGIN_ROOT}/templates` — Nirvana installed as a Claude Code plugin. Claude Code
+   replaces the variable with the plugin's folder before you read this. If item 1 still shows a
+   `${...}` placeholder instead of a real path, this is not a plugin install: skip it.
+2. `~/.claude/nirvana-templates` — Nirvana installed by `install.ps1`/`install.sh`.
+
+If neither exists, tell the user their Nirvana install is incomplete or outdated (pre-2.0) and
+to reinstall — `/plugin install nirvana --marketplace AndrausP/nirvana`, or the installer from
+the README — then stop.
 
 ## STEP 1 — Re-run detection
 

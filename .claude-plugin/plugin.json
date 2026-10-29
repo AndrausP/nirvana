@@ -1,0 +1,14 @@
+{
+  "name": "nirvana",
+  "displayName": "Nirvana",
+  "version": "2.2.0",
+  "description": "Turn Claude Code into a 9-role dev team (Product Owner, Tech Lead, Architect, Devs, Designer, QA, Reader, Writer) with shared memory, sprints and tasks as files.",
+  "author": {
+    "name": "AndrausP",
+    "url": "https://github.com/AndrausP"
+  },
+  "homepage": "https://github.com/AndrausP/nirvana",
+  "repository": "https://github.com/AndrausP/nirvana",
+  "license": "MIT",
+  "keywords": ["multi-agent", "workflow", "agile", "sprints", "memory", "graphify", "product-owner", "qa"]
+}

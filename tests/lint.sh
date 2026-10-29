@@ -97,12 +97,33 @@ versions="$(
   { grep -h '^NIRVANA_VERSION=' install.sh update.sh
     grep -h '^\$NIRVANA_VERSION = ' install.ps1 update.ps1
     grep -h '"nirvana":' templates/state.json
+    grep -h '"version":' .claude-plugin/plugin.json
   } | tr -d '\r' | grep -o '[0-9][0-9.]*[0-9]' | sort -u
 )"
 if [ "$(echo "$versions" | wc -l | tr -d ' ')" = 1 ]; then
   ok "same version everywhere: $versions"
 else
-  fail "versions differ across installers/templates: $(echo "$versions" | tr '\n' ' ')"
+  fail "versions differ across installers/templates/plugin.json: $(echo "$versions" | tr '\n' ' ')"
+fi
+
+# --- plugin manifests ------------------------------------------------------------------
+# plugin.json owns the version: a second one in marketplace.json would be silently ignored
+if grep -q '"version"' .claude-plugin/marketplace.json; then
+  fail "marketplace.json sets a version (keep it only in .claude-plugin/plugin.json)"
+else
+  ok "version only in plugin.json"
+fi
+if [ -n "$PY" ] && "$PY" - <<'EOF'
+import json, sys
+plugin = json.load(open(".claude-plugin/plugin.json", encoding="utf-8"))
+market = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
+entries = [p for p in market["plugins"] if p.get("source") in ("./", ".")]
+sys.exit(0 if len(entries) == 1 and entries[0]["name"] == plugin["name"] else 1)
+EOF
+then
+  ok "marketplace entry for ./ has the plugin.json name"
+else
+  fail "marketplace.json needs one entry with source \"./\" named like plugin.json"
 fi
 
 # --- /light documents the exact hook command the repo uses --------------------------

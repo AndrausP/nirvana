@@ -17,6 +17,16 @@ jobs:
       - name: Static checks (JSON, ASCII .ps1, LF .sh, shellcheck, installer lists, version)
         run: bash tests/lint.sh
 
+  plugin:
+    name: Claude Code plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Validate and install the plugin into a throwaway config dir
+        run: bash tests/plugin.sh
+
   unix:
     name: Hook + installer (${{ matrix.os }})
     strategy:

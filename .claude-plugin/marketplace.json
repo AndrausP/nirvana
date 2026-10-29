@@ -1,0 +1,17 @@
+{
+  "name": "nirvana",
+  "description": "Nirvana: a 9-role dev team for Claude Code, with shared memory and sprints as files",
+  "owner": {
+    "name": "AndrausP",
+    "url": "https://github.com/AndrausP"
+  },
+  "plugins": [
+    {
+      "name": "nirvana",
+      "source": "./",
+      "description": "Turn Claude Code into a 9-role dev team (Product Owner, Tech Lead, Architect, Devs, Designer, QA, Reader, Writer) with shared memory, sprints and tasks as files.",
+      "category": "development",
+      "tags": ["multi-agent", "workflow", "agile", "memory"]
+    }
+  ]
+}

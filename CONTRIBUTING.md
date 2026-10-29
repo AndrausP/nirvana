@@ -11,6 +11,7 @@ Thanks for helping! Bug reports, docs fixes and new ideas are all welcome.
 
 ```
 nirvana/
+├── .claude-plugin/             ← plugin.json + marketplace.json: the repo root is the plugin
 ├── install.ps1 / install.sh    ← installers (Windows / macOS + Linux)
 ├── update.ps1 / update.sh      ← updaters
 ├── skills/<name>/SKILL.md      ← the 7 slash commands, installed to ~/.claude/skills/
@@ -27,7 +28,8 @@ nirvana/
 ```
 
 `/light` runs inside the user's project, not inside this repo, so it reads templates from
-`~/.claude/nirvana-templates/` — that's why the installers mirror the whole `templates/` tree.
+`${CLAUDE_PLUGIN_ROOT}/templates` in a plugin install, or from `~/.claude/nirvana-templates/` in
+a script install — that's why the installers mirror the whole `templates/` tree.
 
 ## Running the tests
 
@@ -35,6 +37,7 @@ nirvana/
 bash tests/lint.sh      # JSON, ASCII-only .ps1, LF .sh, shellcheck, installer lists, version
 bash tests/hook.sh      # SessionStart hook: banner, session counter, compaction notice
 bash tests/install.sh   # install.sh + update.sh into a throwaway HOME
+bash tests/plugin.sh    # claude plugin validate + install into a throwaway config dir
 ```
 
 ```powershell
@@ -45,6 +48,7 @@ powershell -ExecutionPolicy Bypass -File tests\install.ps1
 The install tests never touch your real `~/.claude`: they serve this checkout over a local HTTP
 server (`tests/serve.py`, same `charset=utf-8` as GitHub raw) and point the installers at it with
 `NIRVANA_REPO_RAW`. You need Python 3 for them; shellcheck is optional locally but required in CI.
+`tests/plugin.sh` needs the `claude` CLI and points it at a temporary `CLAUDE_CONFIG_DIR`.
 
 ## Rules the tests enforce
 
@@ -56,8 +60,10 @@ server (`tests/serve.py`, same `charset=utf-8` as GitHub raw) and point the inst
 - **Changing the hook?** Edit `templates/hooks/` and copy the file over `.claude/hooks/` (the
   dogfood copy must match).
 - **Changing the hook command?** Keep `.claude/settings.json` and `skills/light/SKILL.md` in sync.
-- **Bumping the version?** Change it in the four installers and `templates/state.json` (plus
-  `.claude/state.json` and `docs/guide/configuration.md`), and add an entry to `CHANGELOG.md`.
+- **Bumping the version?** Change it in the four installers, `templates/state.json` and
+  `.claude-plugin/plugin.json` (plus `.claude/state.json` and `docs/guide/configuration.md`), and
+  add an entry to `CHANGELOG.md`. Plugin users only receive a release when the `plugin.json`
+  version changes, so bump it for every release; never set a version in `marketplace.json`.
 
 ## Commits and pull requests
 

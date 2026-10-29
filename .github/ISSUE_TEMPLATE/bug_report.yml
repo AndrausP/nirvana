@@ -41,7 +41,7 @@ body:
     attributes:
       label: Nirvana version
       description: Contents of ~/.claude/nirvana-templates/.nirvana-version
-      placeholder: "2.1.0"
+      placeholder: "2.2.0"
     validations:
       required: true
   - type: input

@@ -6,6 +6,24 @@
 
 ## Installing
 
+Pick one of the two ways below — not both, or every command shows up twice.
+
+### As a Claude Code plugin (recommended)
+
+Inside Claude Code:
+```
+/plugin marketplace add AndrausP/nirvana
+/plugin install nirvana@nirvana
+```
+
+From a terminal, the same thing is `claude plugin marketplace add AndrausP/nirvana` followed by
+`claude plugin install nirvana@nirvana`.
+
+The commands then carry the plugin prefix: `/nirvana:light`, `/nirvana:bigtask`, and so on. The
+templates `/light` copies ship inside the plugin, so there is no `~/.claude/nirvana-templates/`.
+
+### With the install script
+
 **Windows — run in PowerShell:**
 ```powershell
 iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/install.ps1 | iex
@@ -26,14 +44,25 @@ The installer:
 
 You only do this **once per machine**.
 
+### Moving from the script to the plugin
+
+Install the plugin, then delete what the script installed:
+`~/.claude/skills/{light,bigtask,smalltask,reflect,law,path,karma}/` and
+`~/.claude/nirvana-templates/`. Projects already set up keep working; re-run `/nirvana:light` in
+each one when you want its Nirvana block refreshed.
+
 ## Updating
 
-**Windows — run in PowerShell:**
+**Plugin:** run `/plugin marketplace update nirvana` in Claude Code, or
+`claude plugin update nirvana@nirvana` in a terminal. To get updates on its own, open `/plugin`,
+go to **Marketplaces**, select `nirvana` and choose **Enable auto-update**.
+
+**Install script — Windows, run in PowerShell:**
 ```powershell
 iwr -useb https://raw.githubusercontent.com/AndrausP/nirvana/main/update.ps1 | iex
 ```
 
-**macOS / Linux — run in terminal:**
+**Install script — macOS / Linux, run in terminal:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/AndrausP/nirvana/main/update.sh | bash
 ```
@@ -109,7 +138,7 @@ your-project/
         └── business-rules.md
 ```
 
-**Global (shared across all your projects):**
+**Global (shared across all your projects) — with the install script:**
 ```
 ~/.claude/
 ├── CLAUDE.md                     ← Nirvana 9-agent table added here
@@ -137,7 +166,7 @@ Edit `.claude/state.json` directly to change any preference:
 
 ```jsonc
 {
-  "nirvana": "2.1.0",
+  "nirvana": "2.2.0",
   "sync": {
     "every": 5,           // sessions between auto doc syncs
     "lastSync": null      // managed by Nirvana — don't edit
@@ -186,9 +215,10 @@ Edit `.claude/state.json` directly to change any preference:
 
 ## Uninstalling
 
-There is no uninstaller yet. To remove Nirvana by hand:
+**Plugin:** run `/plugin uninstall nirvana@nirvana` (or `claude plugin uninstall nirvana@nirvana`
+in a terminal), then remove the `## Nirvana Agents` section from `~/.claude/CLAUDE.md`.
 
-**From the machine:**
+**Install script:** there is no uninstaller yet. To remove Nirvana by hand:
 - Delete `~/.claude/skills/{light,bigtask,smalltask,reflect,law,path,karma}/`
 - Delete `~/.claude/nirvana-templates/`
 - Remove the `## Nirvana Agents` section from `~/.claude/CLAUDE.md`

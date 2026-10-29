@@ -3,7 +3,7 @@
 All notable changes to Nirvana. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [2.2.0] - Unreleased
+## [2.2.0] - 2026-10-29
 
 ### Added
 - Claude Code plugin: install with `/plugin marketplace add AndrausP/nirvana` and
@@ -65,3 +65,5 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Added
 - First release: `/light`, `/bigtask`, `/smalltask`, `/reflect`, `/law`, `/path`, `/karma`,
   installers for Windows and macOS/Linux, and replies in the user's language.
+
+[2.2.0]: https://github.com/AndrausP/nirvana/releases/tag/v2.2.0

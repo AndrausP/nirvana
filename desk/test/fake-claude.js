@@ -5,7 +5,7 @@ const fs = require('fs');
 const args = process.argv.slice(2);
 if (args.includes('--version')) { console.log('9.9.9 (Fake Claude)'); process.exit(0); }
 const log = (o) => { if (process.env.FAKE_LOG) fs.appendFileSync(process.env.FAKE_LOG, JSON.stringify(o) + '\n'); };
-log({ args });
+log({ args, cwd: process.cwd() });
 const arg = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : ''; };
 const SID = arg('--resume') || 'bbbbbbbb-0000-0000-0000-000000000002';
 let mode = arg('--permission-mode') || 'manual';
@@ -70,7 +70,13 @@ process.stdin.on('data', (d) => {
   while ((i = buf.indexOf('\n')) >= 0) {
     const line = buf.slice(0, i); buf = buf.slice(i + 1);
     let m; try { m = JSON.parse(line); } catch { continue; }
-    if (m.type === 'user') { log({ user: m.message.content }); chain = chain.then(() => turn(String(m.message.content))); }
+    if (m.type === 'user') {
+      const ct = m.message.content;
+      const txt = Array.isArray(ct) ? ct.filter((b) => b.type === 'text').map((b) => b.text).join(' ') : String(ct);
+      const nimg = Array.isArray(ct) ? ct.filter((b) => b.type === 'image' && b.source && b.source.type === 'base64').length : 0;
+      log({ user: txt, images: nimg });
+      chain = chain.then(() => turn(nimg ? `${txt} [imagens: ${nimg}]` : txt));
+    }
     else if (m.type === 'control_response') { const r = m.response.response; log({ ctl: r.behavior, upd: !!r.updatedPermissions }); const w = waiting.get(m.response.request_id); if (w) { waiting.delete(m.response.request_id); w(r); } }
     else if (m.type === 'control_request') {
       const sub = m.request.subtype; log({ ctlreq: sub, mode: m.request.mode, model: m.request.model });

@@ -116,7 +116,7 @@ ipcMain.handle('proj:add', async (_e, dir) => {
 });
 ipcMain.handle('proj:remove', (_e, id) => { writeProj(readProj().filter((p) => p.id !== String(id))); return true; });
 ipcMain.handle('proj:rename', (_e, id, name) => { const l = readProj(); const p = l.find((q) => q.id === String(id)); if (p && String(name).trim()) { p.name = String(name).trim().slice(0, 60); writeProj(l); } return true; });
-ipcMain.handle('app:paths', () => ({ claude: scan.CLAUDE, agents: scan.AGENTS_DIR, memory: scan.MEMORY_DIR, version: app.getVersion(), backups: backups() }));
+ipcMain.handle('app:paths', () => ({ claude: scan.CLAUDE, agents: scan.AGENTS_DIR, memory: scan.MEMORY_DIR, version: app.getVersion(), backups: backups(), desktop: process.env.NIRVANA_DESK_DESKTOP || app.getPath('desktop') }));
 ipcMain.handle('app:open', (_e, p) => shell.showItemInFolder(p));
 
 // ---------- falar com o Claude Code (CLI de verdade) ----------
@@ -124,7 +124,7 @@ const sessions = new cli.Sessions((id, ev) => { if (win && !win.isDestroyed()) w
 const cliGuard = (fn) => async (_e, ...a) => { try { return { ok: true, v: await fn(...a) }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } };
 ipcMain.handle('cli:info', cliGuard(() => { const bin = cli.findBin(); return { bin, version: bin ? cli.version(bin) : '', modes: cli.MODES }; }));
 ipcMain.handle('cli:open', cliGuard((o) => sessions.open({ cwd: String(o.cwd || ''), resume: o.resume ? String(o.resume) : '', model: o.model ? String(o.model) : '', mode: String(o.mode || 'manual') })));
-ipcMain.handle('cli:send', cliGuard((id, text) => { sessions.send(String(id), String(text)); return true; }));
+ipcMain.handle('cli:send', cliGuard((id, p) => { sessions.send(String(id), typeof p === 'string' ? p : p); return true; }));
 ipcMain.handle('cli:answer', cliGuard((id, req, d) => { sessions.answer(String(id), String(req), d || {}); return true; }));
 ipcMain.handle('cli:interrupt', cliGuard((id) => { sessions.interrupt(String(id)); return true; }));
 ipcMain.handle('cli:setMode', cliGuard((id, m) => { sessions.setMode(String(id), String(m)); return true; }));

@@ -18,6 +18,7 @@ const mainFile = path.join(claude, 'projects', '-fx-proj', MAIN_ID + '.jsonl');
 process.env.NIRVANA_DESK_CLAUDE_BIN = path.join(__dirname, 'fake-claude.js');
 process.env.FAKE_LOG = fakeLog; process.env.FAKE_TRANSCRIPT = mainFile; process.env.FAKE_TRANSCRIPT_SID = MAIN_ID;
 process.env.NIRVANA_DESK_PICKDIR = projDir;
+process.env.NIRVANA_DESK_DESKTOP = otherDir;
 
 // ---------- fixture ----------
 const w = (rel, text) => { const f = path.join(claude, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); };
@@ -294,6 +295,37 @@ async function run() {
   await ev(`[...document.querySelectorAll('#list .item')].find((i) => i.textContent.includes('Beta')).click()`);
   await ev(`__blur(); __k('6', { ctrlKey: true })`);
   await until(`__txt('#list h2') === 'Memória geral'`);
+
+  // 14c2 — conversa limpa sem projeto vai para a Área de Trabalho
+  await ev(`__blur(); __k('1', { ctrlKey: true })`);
+  await until(`!!document.querySelector('[data-act=chat-noproj-new]')`);
+  await ev(`document.querySelector('[data-act=chat-new]').click()`);
+  check('em conversa nova com pasta de projeto aparece "sem projeto"', await until(`!!document.querySelector('[data-act=chat-noproj]')`));
+  await ev(`document.querySelector('[data-act=chat-noproj]').click()`);
+  check('tirar o projeto troca a pasta para a Área de Trabalho', await until(`__txt('.dirchip').includes('Área de Trabalho') && !document.querySelector('[data-act=chat-noproj]')`), await ev(`__txt('.composer.chat .cbar')`));
+  const nb = logLines().length;
+  await say('conversa limpa');
+  check('o CLI sobe com a Área de Trabalho como pasta (sem --resume)', await (async () => { for (let i = 0; i < 80; i++) { const a = logLines().slice(nb).find((l) => l.args); if (a) return !a.args.includes('--resume') && path.resolve(a.cwd).toLowerCase() === path.resolve(otherDir).toLowerCase(); await sleep(100); } return false; })(), JSON.stringify(logLines().slice(nb)));
+  await until(`!document.querySelector('.composer.chat .stop:not([hidden])')`, 8000);
+  await ev(`[...document.querySelectorAll('#list .item')].find((i) => i.textContent.includes('faz a feature')) && [...document.querySelectorAll('#list .item')].find((i) => i.textContent.includes('faz a feature')).click()`);
+  await until(`__txt('.head h1') === 'Broker'`);
+
+  // 14c3 — colar imagem; atualização do transcript não recarrega a tela nem tira o cursor
+  await ev(`__blur(); __k('1', { ctrlKey: true })`);
+  await until(`__txt('.head h1') === 'Broker' && !!document.querySelector('#cmp')`);
+  await ev(`(() => { const dt = new DataTransfer(); const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0)); dt.items.add(new File([bytes], 'x.png', { type: 'image/png' })); const ta = document.querySelector('#cmp'); ta.focus(); ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); return true; })()`);
+  check('colar imagem (Ctrl+V) anexa uma miniatura', await until(`document.querySelectorAll('#attach .thumb').length === 1 && !document.querySelector('#attach').hidden`));
+  await say('veja esta imagem');
+  check('a imagem aparece na mensagem enviada e o anexo é limpo', await until(`!!document.querySelector('.mimg') && document.querySelectorAll('#attach .thumb').length === 0`, 4000));
+  check('o CLI recebe a imagem como bloco base64', await (async () => { for (let i = 0; i < 80; i++) { if (logLines().some((l) => l.images === 1 && l.user === 'veja esta imagem')) return true; await sleep(100); } return false; })(), JSON.stringify(logLines().slice(-3)));
+  await until(`!document.querySelector('.composer.chat .stop:not([hidden])')`, 8000);
+
+  await ev(`(() => { const ta = document.querySelector('#cmp'); ta.focus(); ta.value = 'rascunho em andamento'; ta.setSelectionRange(5, 5); ta.dispatchEvent(new Event('input', { bubbles: true })); const th = document.querySelector('.thread'); th.__m = 't'; document.querySelector('.composer.chat').__m = 'c'; th.scrollTop = 30; window.__st = th.scrollTop; return true; })()`);
+  fs.appendFileSync(mainFile, JSON.stringify({ type: 'assistant', timestamp: new Date().toISOString(), message: { role: 'assistant', model: 'claude-x', content: [{ type: 'text', text: 'novidade vinda do transcript' }] } }) + '\n');
+  check('conteúdo novo do transcript aparece sozinho', await until(`__txt('.thread').includes('novidade vinda do transcript')`, 10000));
+  check('compositor mantém foco, texto e posição do cursor', await ev(`document.activeElement.id === 'cmp' && document.querySelector('#cmp').value === 'rascunho em andamento' && document.querySelector('#cmp').selectionStart === 5 && document.querySelector('.composer.chat').__m === 'c'`));
+  check('a tela não é recriada e a rolagem é mantida', await ev(`document.querySelector('.thread').__m === 't' && (document.querySelector('.thread').scrollTop === window.__st || document.querySelector('.thread').scrollHeight <= document.querySelector('.thread').clientHeight)`));
+  await ev(`document.querySelector('#cmp').value = ''; document.querySelector('#cmp').blur(); true`);
 
   // 14d — projetos: pastas registradas separam o contexto
   await ev(`__blur(); __k('7', { ctrlKey: true })`);

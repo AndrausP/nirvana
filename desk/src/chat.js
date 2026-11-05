@@ -6,6 +6,9 @@ const Chat = (() => {
   let info = null;              // { bin, version, modes }
   let cmds = [];                // comandos conhecidos antes do init
   let newN = 0;
+  let pending = [];             // imagens coladas, ainda não enviadas
+  let imgN = 0;
+  const IMG_OK = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
   const prefs = Object.assign({ model: '', mode: 'manual' }, store.get('nirvana-desk.chat', {}));
   const savePrefs = () => store.set('nirvana-desk.chat', prefs);
 
@@ -65,7 +68,7 @@ const Chat = (() => {
       case 'control_cancel_request': { const p = lastOf(s, (x) => x.k === 'perm' && x.req === ev.request_id); if (p && p.st === 'ask') p.st = 'cancel'; break; }
       case 'result':
         s.busy = false;
-        s.items.push({ k: 'result', ok: !ev.is_error && ev.subtype === 'success', ms: ev.duration_ms, cost: ev.total_cost_usd, sub: ev.subtype, t: ev.is_error ? String(ev.result || '') : '' });
+        s.items.push({ k: 'result', ok: !ev.is_error && ev.subtype === 'success', ms: ev.duration_ms, sub: ev.subtype, t: ev.is_error ? String(ev.result || '') : '' });
         done(s, true); return;
     }
     paint();
@@ -133,7 +136,7 @@ const Chat = (() => {
   }
   async function send(raw) {
     const text = String(raw || '').trim();
-    if (!text) return;
+    if (!text && !pending.length) return;
     const t = target();
     if (!t.cwd) { await pickDir(true); return; }
     let s = sessions.get(t.key);
@@ -142,10 +145,12 @@ const Chat = (() => {
     const mm = text.match(/^\/model\s+(\S+)\s*$/);
     if (mm) { prefs.model = mm[1]; savePrefs(); if (s && !s.dead) await window.desk.cliSetModel(s.id, mm[1]); toast(`Modelo: ${mm[1]}`); mount(); return; }
     if (!s || s.dead) { s = await start(t); if (!s) return; }
-    s.items.push({ k: 'me', t: text, at: Date.now() });
+    const imgs = pending;
+    pending = []; paintAttach();
+    s.items.push({ k: 'me', t: text, at: Date.now(), imgs: imgs.map((p) => p.url) });
     s.busy = true;
     paint(true);
-    const r = await window.desk.cliSend(s.id, text);
+    const r = await window.desk.cliSend(s.id, imgs.length ? { text, images: imgs.map((p) => ({ media: p.media, data: p.data })) } : text);
     if (!r.ok) { s.busy = false; s.items.push({ k: 'note', t: r.error }); paint(); }
   }
   async function stop() {
@@ -166,6 +171,14 @@ const Chat = (() => {
     state.newChat = { key: 'new:' + (++newN), cwd: cwd || '' };
     paintAll(false);
     setTimeout(() => { const i = $('#cmp'); if (i) i.focus(); }, 30);
+  }
+  // Conversa limpa, sem projeto: roda na Área de Trabalho e tira o filtro de projeto (senão ela ficaria escondida).
+  function noProject() {
+    const desk = (state.paths || {}).desktop;
+    if (!desk) { toast('Não achei a Área de Trabalho.', true); return; }
+    if (state.proj) { state.proj = null; state.gmem = state.gmemAll.filter((m) => gmemInProj(m, null)); build(); }
+    state.view = 'broker'; state.q = '';
+    newChat(desk);
   }
   async function pickDir(thenFocus) {
     const d = await window.desk.pickDir();
@@ -202,18 +215,51 @@ const Chat = (() => {
   }
 
   // ---------- UI ----------
+  function attachHtml() {
+    return pending.map((p) => `<span class="thumb"><img src="${p.url}" alt="imagem anexada"><button data-rmimg="${p.id}" aria-label="Remover imagem" title="Remover">${icon('x', 11)}</button></span>`).join('');
+  }
+  function paintAttach() { const el = $('#attach'); if (el) { el.hidden = !pending.length; el.innerHTML = attachHtml(); } }
+  function addFiles(files) {
+    for (const f of files) {
+      if (!IMG_OK.includes(f.type)) { toast('Só imagens PNG, JPG, GIF ou WebP.', true); continue; }
+      if (pending.length >= 5) { toast('Máximo de 5 imagens por mensagem.', true); break; }
+      if (f.size > 4.5 * 1024 * 1024) { toast('Imagem maior que 4,5 MB.', true); continue; }
+      const r = new FileReader();
+      r.onload = () => { const u = String(r.result); pending.push({ id: ++imgN, media: f.type, data: u.slice(u.indexOf(',') + 1), url: u }); paintAttach(); };
+      r.readAsDataURL(f);
+    }
+  }
+  document.addEventListener('paste', (e) => {
+    if (!e.target || e.target.id !== 'cmp') return;
+    const files = [...((e.clipboardData && e.clipboardData.files) || [])].filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return; // texto: cola normal
+    e.preventDefault();
+    addFiles(files);
+  });
+  document.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.composer.chat')) e.preventDefault(); });
+  document.addEventListener('drop', (e) => {
+    if (!e.target.closest || !e.target.closest('.composer.chat')) return;
+    e.preventDefault();
+    addFiles([...((e.dataTransfer && e.dataTransfer.files) || [])]);
+  });
+
   function composerHtml() {
     const t = target();
     const s = cur();
-    const dirName = t.cwd ? t.cwd.replace(/[\\/]+$/, '').split(/[\\/]/).pop() : 'escolher pasta';
+    const desk = (state.paths || {}).desktop || '';
+    const isDesk = !!t.cwd && !!desk && normP(t.cwd) === normP(desk);
+    const dirName = isDesk ? 'Área de Trabalho' : t.cwd ? t.cwd.replace(/[\\/]+$/, '').split(/[\\/]/).pop() : 'escolher pasta';
+    const canDrop = !!t.cwd && !isDesk && !!desk && (state.newChat || sessions.has(t.key) === false);
     const mode = (s && s.mode) || prefs.mode;
     const sel = (id, opts, val) => `<select id="${id}" aria-label="${id}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === val ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     return `<div class="composer chat" data-key="${esc(t.key)}">
       <div class="cbar">
         <button class="chip dirchip" data-act="chat-dir" title="${esc(t.cwd || 'Escolha a pasta do projeto')}">${icon('folder', 13)}${esc(dirName)}</button>
+        ${state.newChat && canDrop ? `<button class="chip" data-act="chat-noproj" title="Tirar o projeto: conversa limpa na Área de Trabalho">${icon('x', 12)}sem projeto</button>` : ''}
         ${sel('c-model', MODELS, prefs.model)}${sel('c-mode', Object.entries(MODE_LABEL), mode)}
         <span class="grow"></span><span class="cinfo" id="cinfo"></span>
       </div>
+      <div class="attach" id="attach" ${pending.length ? '' : 'hidden'}>${attachHtml()}</div>
       <div class="crow">
         <textarea id="cmp" rows="1" placeholder="${t.key ? 'Fale com o Claude Code…  (/ para comandos, Enter envia, Shift+Enter quebra linha)' : 'Escolha uma conversa ou clique em “Nova conversa”'}" aria-label="Mensagem"></textarea>
         <button class="send go" data-act="chat-send" title="Enviar (Enter)" aria-label="Enviar">${icon('send', 17)}</button>
@@ -231,10 +277,10 @@ const Chat = (() => {
     for (const it of s.items) {
       if (it.k === 'tool') { tools.push(it); continue; }
       flush();
-      if (it.k === 'me') h += `<div class="row me"><div class="bubble brief">${copyBtn(it.t)}<div class="who">Você <i>→ Claude Code</i></div><div class="body">${md(it.t)}</div><div class="time">${fmtTime(new Date(it.at).toISOString())}</div></div></div>`;
+      if (it.k === 'me') h += `<div class="row me"><div class="bubble brief">${copyBtn(it.t)}<div class="who">Você <i>→ Claude Code</i></div>${(it.imgs || []).map((u) => `<img class="mimg" src="${u}" alt="imagem enviada">`).join('')}<div class="body">${md(it.t)}</div><div class="time">${fmtTime(new Date(it.at).toISOString())}</div></div></div>`;
       else if (it.k === 'agent') h += `<div class="row">${avatar(bk, 'sm')}<div class="bubble agent" style="--c:#e9d5ff"><div class="who">Broker${it.live ? '<i>respondendo…</i>' : ''}</div><div class="body">${md(it.t || '…')}${it.live ? '<span class="caret"></span>' : ''}</div></div></div>`;
       else if (it.k === 'perm') h += permHtml(it);
-      else if (it.k === 'result') h += it.ok ? `<div class="note ok">Concluído${it.ms ? ' · ' + dur(it.ms) : ''}${it.cost ? ' · US$ ' + it.cost.toFixed(3) : ''}</div>` : `<div class="note">${esc(it.t || it.sub || 'Terminou com erro')}</div>`;
+      else if (it.k === 'result') h += it.ok ? `<div class="note ok">Concluído${it.ms ? ' · ' + dur(it.ms) : ''}</div>` : `<div class="note">${esc(it.t || it.sub || 'Terminou com erro')}</div>`;
       else if (it.k === 'note') h += `<div class="note">${esc(it.t)}</div>`;
     }
     flush();
@@ -325,14 +371,16 @@ const Chat = (() => {
   });
   document.addEventListener('click', (e) => {
     const sl = e.target.closest('[data-slash]'); if (sl) { pickSlash(sl.dataset.slash); return; }
+    const rm = e.target.closest('[data-rmimg]'); if (rm) { pending = pending.filter((x) => String(x.id) !== rm.dataset.rmimg); paintAttach(); return; }
     const p = e.target.closest('[data-perm]'); if (p) { answer(p.dataset.req, p.dataset.perm); return; }
     const a = e.target.closest('[data-act]'); if (!a) return;
     if (a.dataset.act === 'chat-send') { const ta = $('#cmp'); const v = ta.value; ta.value = ''; grow(); send(v); }
     else if (a.dataset.act === 'chat-stop') stop();
     else if (a.dataset.act === 'chat-dir') pickDir(true);
+    else if (a.dataset.act === 'chat-noproj' || a.dataset.act === 'chat-noproj-new') noProject();
     else if (a.dataset.act === 'chat-new') { newChat((curProj() && curProj().path) || target().cwd || (state.broker[0] || {}).cwd || ''); }
   });
 
   window.desk.onCli(onEvent);
-  return { confirmBox, isLiveOnly: () => !state.newChat && !state.broker.find((x) => x.id === state.bSel) && sessions.has(state.bSel), composerHtml, liveHtml, mount, paint, newChat, send, target, cur, _sessions: sessions, ensureInfo };
+  return { noProject, confirmBox, isLiveOnly: () => !state.newChat && !state.broker.find((x) => x.id === state.bSel) && sessions.has(state.bSel), composerHtml, liveHtml, mount, paint, newChat, send, target, cur, _sessions: sessions, ensureInfo };
 })();

@@ -1,6 +1,8 @@
 /* Nirvana Desk — renderer. Somente leitura sobre ~/.claude. */
 const $ = (s) => document.querySelector(s);
 const norm = (s) => String(s || '').trim().toLowerCase();
+// Só mexe no DOM se o HTML mudou: evita piscar, perder foco/seleção/rolagem a cada atualização.
+function setHtml(el, html) { if (el.__h === html) return false; el.__h = html; el.innerHTML = html; return true; }
 
 const COLORS = ['#a78bfa', '#2dd4bf', '#f472b6', '#fbbf24', '#60a5fa', '#34d399', '#fb923c', '#c084fc', '#22d3ee', '#f87171'];
 const ICON_BY_SLUG = {
@@ -181,9 +183,9 @@ const field = (id, label, hint, inner) => `<div class="field"><label for="${id}"
 function renderRail() {
   const anyActive = state.agents.some((a) => a.active);
   const nav = (v, ic, tip, extra = '') => `<button class="nav ${state.view === v ? 'on' : ''}" data-view="${v}" data-tip="${tip}" aria-label="${tip}">${icon(ic, 22)}${extra}</button>`;
-  $('#rail').innerHTML = `<div class="logo">${LOGO}</div>` +
+  setHtml($('#rail'), `<div class="logo">${LOGO}</div>` +
     nav('broker', 'crown', 'Broker') + nav('agents', 'users', 'Agentes') + nav('chain', 'chat', 'Cadeia', anyActive ? '<i class="dot"></i>' : '') +
-    nav('brain', 'net', 'Organograma') + nav('memory', 'db', 'Memória') + nav('general', 'layers', 'Memória geral') + nav('projects', 'folder', 'Projetos') + '<div class="grow"></div>' + nav('settings', 'gear', 'Configurações');
+    nav('brain', 'net', 'Organograma') + nav('memory', 'db', 'Memória') + nav('general', 'layers', 'Memória geral') + nav('projects', 'folder', 'Projetos') + '<div class="grow"></div>' + nav('settings', 'gear', 'Configurações'));
 }
 
 // ---------- lista (coluna 2) ----------
@@ -215,7 +217,7 @@ function renderList() {
   } else if (state.view === 'broker') {
     title = 'Broker'; ph = 'Buscar conversa…';
     const list = state.broker.filter((b) => inProj(b.cwd) && (!q || norm(b.project + ' ' + b.title).includes(q)));
-    body = `<button class="btn primary newchat" data-act="chat-new">${icon('send', 15)}Nova conversa</button>` + ((state.newChat || Chat.isLiveOnly()) ? `<button class="item on" data-act="chat-new">${avatar({ color: '#2dd4bf', icon: 'crown' })}<div class="meta"><div class="nm"><span class="tt">Nova conversa</span></div><div class="sub">${esc(Chat.target().cwd || 'escolha a pasta')}</div></div></button>` : '') + list.map((b) => `<button class="item ${state.bSel === b.id && !state.newChat && !Chat.isLiveOnly() ? 'on' : ''}" data-broker="${esc(b.id)}">${avatar({ color: '#e9d5ff', icon: 'crown' })}
+    body = `<button class="btn primary newchat" data-act="chat-new">${icon('send', 15)}Nova conversa</button><button class="btn ghost newchat" data-act="chat-noproj-new" title="Conversa limpa na Área de Trabalho, sem projeto">${icon('layers', 15)}Sem projeto</button>` + ((state.newChat || Chat.isLiveOnly()) ? `<button class="item on" data-act="chat-new">${avatar({ color: '#2dd4bf', icon: 'crown' })}<div class="meta"><div class="nm"><span class="tt">Nova conversa</span></div><div class="sub">${esc(Chat.target().cwd || 'escolha a pasta')}</div></div></button>` : '') + list.map((b) => `<button class="item ${state.bSel === b.id && !state.newChat && !Chat.isLiveOnly() ? 'on' : ''}" data-broker="${esc(b.id)}">${avatar({ color: '#e9d5ff', icon: 'crown' })}
       <div class="meta"><div class="nm"><span class="tt">${esc(b.project || 'sessão')}</span>${Date.now() - b.mtime < ACTIVE_MS ? '<i class="live"></i>' : ''}<span class="t">${rel(b.mtime)}</span></div>
       <div class="sub">${esc(b.title)}</div></div></button>`).join('') || '<div class="empty-list">Nenhuma conversa com o broker encontrada.</div>';
   } else if (state.view === 'brain') {
@@ -266,9 +268,10 @@ function renderList() {
     body = '<div class="empty-list">Fonte de dados, atualização e sobre.</div>';
   }
   const pj = curProj();
-  el.innerHTML = `<h2>${title}</h2>` + (pj && state.view !== 'projects' ? `<div class="projbar" title="${esc(pj.path)}">${icon('folder', 14)}<span>${esc(pj.name)}</span><button data-proj="" aria-label="Ver todos os projetos" title="Ver todos">${icon('x', 13)}</button></div>` : '') +
+  const listHtml = `<h2>${title}</h2>` + (pj && state.view !== 'projects' ? `<div class="projbar" title="${esc(pj.path)}">${icon('folder', 14)}<span>${esc(pj.name)}</span><button data-proj="" aria-label="Ver todos os projetos" title="Ver todos">${icon('x', 13)}</button></div>` : '') +
     (state.view === 'settings' ? '' : `<label class="search">${icon('search', 18)}<input id="q" placeholder="${ph}" value="${esc(state.q)}" autocomplete="off"></label>`) +
     `<div class="items">${body}</div>`;
+  setHtml(el, listHtml);
   const items = el.querySelector('.items');
   if (items) items.scrollTop = top;
   if (hadFocus) { const i = $('#q'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
@@ -434,17 +437,26 @@ function callHtml(m) {
     <span class="cc-s">briefing de ${num(m.chars)} caracteres — só isso + a memória dele</span></button>`;
 }
 async function renderBroker(el, token) {
-  const keepC = el.querySelector('.composer.chat');
-  const withComposer = (html) => {
-    el.innerHTML = html;
-    const nc = el.querySelector('.composer.chat');
-    if (keepC && nc && keepC.dataset.key === nc.dataset.key) nc.replaceWith(keepC);
+  // Atualização incremental: cabeçalho e histórico só mudam se o conteúdo mudou; o compositor (texto, cursor,
+  // anexos) nunca é recriado. Assim cada comando do Claude não "recarrega" a tela nem tira o cursor.
+  const present = (headH, histH) => {
+    const keepC = el.querySelector('.composer.chat');
+    const th = el.querySelector('.thread');
+    if (keepC && keepC.dataset.key === Chat.target().key && th && th.querySelector('#hist') && th.querySelector('#live') && el.querySelector('.head')) {
+      const hd = el.querySelector('.head');
+      if (hd.__h !== headH) { hd.outerHTML = headH; el.querySelector('.head').__h = headH; }
+      const hi = th.querySelector('#hist');
+      if (hi.__h !== histH) { hi.innerHTML = histH; hi.__h = histH; }
+    } else {
+      el.innerHTML = headH + `<div class="thread"><div id="hist">${histH}</div><div id="live"></div></div>` + Chat.composerHtml();
+      el.querySelector('.head').__h = headH; el.querySelector('#hist').__h = histH;
+    }
     Chat.mount();
   };
+  const bk = { color: '#e9d5ff', icon: 'crown' };
   if (state.newChat || Chat.isLiveOnly()) {
-    const bk0 = { color: '#e9d5ff', icon: 'crown' };
-    withComposer(`<div class="head">${avatar(bk0, 'lg')}<h1>Nova conversa</h1><span class="sep"></span><span class="chip">${esc(Chat.target().cwd || 'sem pasta')}</span><span class="spacer"></span></div>
-      <div class="thread"><div class="note">Escolha a pasta do projeto (botão abaixo) e escreva. É o Claude Code de verdade: mesmos comandos, skills, hooks e memória.</div><div id="live"></div></div>${brokerComposer()}`);
+    present(`<div class="head">${avatar(bk, 'lg')}<h1>Nova conversa</h1><span class="sep"></span><span class="chip">${esc(Chat.target().cwd || 'sem pasta')}</span><span class="spacer"></span></div>`,
+      '<div class="note">Escolha a pasta do projeto (botão abaixo) e escreva. É o Claude Code de verdade: mesmos comandos, skills, hooks e memória.</div>');
     return;
   }
   const b = state.broker.find((x) => x.id === state.bSel);
@@ -453,7 +465,6 @@ async function renderBroker(el, token) {
   if (token !== state.tok) return;
   state.brokerStats = data.stats;
   renderCtx();
-  const bk = { color: '#e9d5ff', icon: 'crown' };
   let html = data.total > data.msgs.length ? `<div class="note">Mostrando as últimas ${data.msgs.length} de ${data.total} mensagens.</div>` : '';
   html += `<div class="runsep"><span class="d">${fmtDay(b.start)} · ${fmtTime(b.start)}</span><div class="ds"><b>Conversa com o broker</b> · ${esc(b.project)}</div></div>`;
   for (const m of data.msgs) {
@@ -465,10 +476,9 @@ async function renderBroker(el, token) {
   }
   state.lastThread = null;
   const live = Date.now() - b.mtime < ACTIVE_MS;
-  withComposer(`<div class="head">${avatar(bk, 'lg')}<h1>Broker</h1><span class="sep"></span><span class="pill ${live ? '' : 'off'}">${live ? 'Ao vivo' : 'Encerrada'}</span>
+  present(`<div class="head">${avatar(bk, 'lg')}<h1>Broker</h1><span class="sep"></span><span class="pill ${live ? '' : 'off'}">${live ? 'Ao vivo' : 'Encerrada'}</span>
     <span class="chip">${esc(b.project)}</span><span class="chip">${num(data.total)} mensagens</span><span class="spacer"></span>
-    <button class="icon-btn" data-act="refresh" title="Atualizar" aria-label="Atualizar">${icon('refresh', 18)}</button></div>
-    <div class="thread">${html}<div id="live"></div></div>${brokerComposer()}`);
+    <button class="icon-btn" data-act="refresh" title="Atualizar" aria-label="Atualizar">${icon('refresh', 18)}</button></div>`, html);
 }
 const brokerComposer = () => Chat.composerHtml();
 const brokerComposerOld = () => `<div class="composer"><input disabled placeholder="Fale com o broker no terminal do Claude Code — aqui você acompanha ao vivo" aria-label="Mensagem"><span class="ro">Modo leitura · ao vivo</span><span class="send" title="Envio disponível numa próxima versão">${icon('send', 17)}</span></div>`;
@@ -647,7 +657,7 @@ function renderCtx() {
     html += kv('branch', 'Execuções', num(state.runs.length));
     html += kv('chat', 'Sessões', num(state.sessions.length));
   }
-  el.innerHTML = html;
+  setHtml(el, html);
 }
 
 // ---------- ciclo ----------

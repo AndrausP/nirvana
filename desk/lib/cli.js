@@ -8,6 +8,7 @@ const path = require('path');
 
 const MODES = ['manual', 'acceptEdits', 'plan', 'bypassPermissions'];
 const MODEL_RE = /^[A-Za-z0-9._\-\[\]]{1,60}$/;
+const IMG_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const ID_RE = /^[0-9a-fA-F-]{8,64}$/;
 
 function findBin() {
@@ -74,7 +75,23 @@ class Sessions {
     if (!s || s.closed || !s.proc.stdin.writable) throw new Error('Sessão encerrada');
     s.proc.stdin.write(JSON.stringify(obj) + '\n');
   }
-  send(id, text) { this._w(id, { type: 'user', message: { role: 'user', content: String(text) } }); }
+  // payload: texto, ou { text, images: [{ media, data(base64) }] }
+  send(id, p) {
+    let content;
+    if (typeof p === 'string') content = p;
+    else {
+      const imgs = Array.isArray(p && p.images) ? p.images : [];
+      if (imgs.length > 5) throw new Error('Máximo de 5 imagens por mensagem');
+      content = [];
+      for (const i of imgs) {
+        if (!IMG_TYPES.includes(i.media) || typeof i.data !== 'string' || !/^[A-Za-z0-9+/]+=*$/.test(i.data) || i.data.length > 7000000) throw new Error('Imagem inválida ou grande demais');
+        content.push({ type: 'image', source: { type: 'base64', media_type: i.media, data: i.data } });
+      }
+      if (p && p.text && String(p.text).trim()) content.push({ type: 'text', text: String(p.text) });
+      if (!content.length) throw new Error('Mensagem vazia');
+    }
+    this._w(id, { type: 'user', message: { role: 'user', content } });
+  }
   answer(id, requestId, d) {
     const response = d.allow
       ? { behavior: 'allow', updatedInput: d.input || {}, ...(d.remember && d.suggestions ? { updatedPermissions: d.suggestions } : {}) }

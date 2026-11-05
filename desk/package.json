@@ -1,0 +1,57 @@
+{
+  "name": "nirvana-desk",
+  "productName": "Nirvana Desk",
+  "version": "0.1.0",
+  "description": "Visualizador desktop do comportamento dos agentes do Claude Code / Nirvana",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test:e2e": "electron test/e2e-main.js",
+    "dist": "electron-builder --win nsis --x64",
+    "icon": "electron build/make-icon.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Nirvana",
+  "build": {
+    "appId": "com.nirvana.desk",
+    "productName": "Nirvana Desk",
+    "copyright": "Nirvana",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**",
+      "src/**",
+      "package.json",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nirvana Desk",
+      "artifactName": "Nirvana-Desk-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
